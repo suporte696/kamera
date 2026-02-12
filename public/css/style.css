@@ -101,14 +101,16 @@ p {
 }
 
 /* ── Night Vision Mode ────────────────────────────── */
+/* Simple but powerful filters to avoid 'muddiness' */
 .night-vision {
-  filter: grayscale(1) brightness(3.5) contrast(1.6) sepia(1) hue-rotate(80deg) saturate(3);
+  filter: grayscale(1) brightness(4.5) contrast(1.8) !important;
 }
 
 .night-vision-lift {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.35);
+  /* "Levanta" as sombras drasticamente */
   pointer-events: none;
   opacity: 0;
   z-index: 5;
@@ -123,8 +125,9 @@ p {
   position: absolute;
   inset: 0;
   background:
-    repeating-linear-gradient(0deg, transparent 0, rgba(0, 255, 0, 0.08) 1px, transparent 2px),
-    rgba(0, 50, 0, 0.15);
+    repeating-linear-gradient(0deg, transparent 0, rgba(0, 255, 0, 0.1) 1px, transparent 2px),
+    rgba(0, 100, 0, 0.2);
+  /* Tom verde de alta visibilidade */
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
@@ -143,6 +146,7 @@ p {
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
+  /* Sempre ACIMA dos filtros/overlays */
   width: calc(100% - 2rem);
   max-width: 480px;
   background: rgba(15, 23, 42, 0.8);

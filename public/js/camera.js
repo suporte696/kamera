@@ -48,8 +48,9 @@
             localStream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: 'environment' },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
+                    width: { ideal: 1920 }, // High resolution for better sensor pull
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 15, max: 20 }, // Lower frame rate allows longer exposure per frame
                 },
                 audio: true,
             });
