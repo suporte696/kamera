@@ -24,7 +24,7 @@
     let isMuted = true;
     let reconnectTimer = null;
     let nightVisionEnabled = false;
-    let rotation = 90;
+    let rotation = 0; // Start at 0 to avoid initial crop
 
     // ── Interaction State (Zoom & Pan) ──────────────
     let zoomLevel = 0; // 0, 1, 2 (corresponds to 1x, 2.5x, 4x)
@@ -303,9 +303,69 @@
         } catch (err) { }
     }
 
+    // ── Pinch to Zoom (Mobile) ──────────────────────
+    let evCache = [];
+    let prevDiff = -1;
+
+    function pointerDownHandler(ev) {
+        evCache.push(ev);
+        if (evCache.length === 2) {
+            isDragging = false; // Stop dragging if pinching starts
+            remoteVideo.style.transition = 'none';
+        }
+    }
+
+    function pointerMoveHandler(ev) {
+        // Find this event in the cache and update its record with this one
+        const index = evCache.findIndex((cachedEv) => cachedEv.pointerId === ev.pointerId);
+        evCache[index] = ev;
+
+        // If two pointers are down, check for pinch gestures
+        if (evCache.length === 2) {
+            // Calculate the distance between the two pointers
+            const curDiff = Math.hypot(evCache[0].clientX - evCache[1].clientX, evCache[0].clientY - evCache[1].clientY);
+
+            if (prevDiff > 0) {
+                const delta = (curDiff - prevDiff) * 0.01;
+                const newScale = Math.min(Math.max(zoomScales[zoomLevel] + delta, 1), 6);
+
+                // Update the current zoom level index if it crosses a threshold
+                // For simplicity, we just update the actual scale inline
+                remoteVideo.style.transform = `rotate(${rotation}deg) scale(${newScale}) translate(${translateX}px, ${translateY}px)`;
+
+                // Keep the "official" current scale level synchronized roughly
+                if (newScale > 1.2) {
+                    videoContainer.classList.add('has-zoom');
+                } else {
+                    videoContainer.classList.remove('has-zoom');
+                    translateX = 0; translateY = 0;
+                }
+            }
+            prevDiff = curDiff;
+        }
+    }
+
+    function pointerUpHandler(ev) {
+        const index = evCache.findIndex((cachedEv) => cachedEv.pointerId === ev.pointerId);
+        evCache.splice(index, 1);
+        if (evCache.length < 2) {
+            prevDiff = -1;
+            // Snapping to the nearest scale step for consistency
+            // if (zoomLevel > 0) updateTransform();
+        }
+    }
+
+    remoteVideo.addEventListener('pointerdown', pointerDownHandler);
+    remoteVideo.addEventListener('pointermove', pointerMoveHandler);
+    remoteVideo.addEventListener('pointerup', pointerUpHandler);
+    remoteVideo.addEventListener('pointercancel', pointerUpHandler);
+    remoteVideo.addEventListener('pointerout', pointerUpHandler);
+    remoteVideo.addEventListener('pointerleave', pointerUpHandler);
+
     // Initialize UI
     lucide.createIcons();
     updateRotation();
+    updateTransform(); // Ensure sync on startup to avoid crop
     btnMute.classList.add('active');
     requestWakeLock();
 
