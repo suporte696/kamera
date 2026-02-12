@@ -167,8 +167,9 @@
     btnMute.addEventListener('click', () => {
         isMuted = !isMuted;
         remoteVideo.muted = isMuted;
-        btnMute.textContent = isMuted ? '🔇' : '🔊';
+        btnMute.innerHTML = isMuted ? '<i data-lucide="volume-x"></i>' : '<i data-lucide="volume-2"></i>';
         btnMute.classList.toggle('active', isMuted);
+        lucide.createIcons();
     });
 
     // ── Fullscreen ───────────────────────────────────
@@ -239,7 +240,6 @@
     }
 
     // Initialize UI
-    btnMute.textContent = '🔇';
     btnMute.classList.add('active');
 
     requestWakeLock();

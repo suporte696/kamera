@@ -4,24 +4,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Kamera — Viewer</title>
-  <meta name="description" content="Babá eletrônica P2P em tempo real">
+  <title>Kamera — Monitor</title>
+  <meta name="description" content="Assistir câmera como babá eletrônica">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎥</text></svg>">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
 
-  <!-- Waiting State -->
+  <!-- Waiting Screen -->
   <div class="center-message" id="waitingScreen">
-    <div class="center-icon">👶</div>
-    <h2>Kamera</h2>
-    <p>Aguardando a câmera ser conectada…</p>
-    <div class="spinner"></div>
-    <button class="btn btn-primary" onclick="location.href='/camera.html'" style="margin-top: 20px;">
-      Ser Câmera 🎥
-    </button>
+    <div class="icon-box">
+      <i data-lucide="camera-off"></i>
+    </div>
+    <div class="message-box">
+      <h2>Aguardando Sinal</h2>
+      <p>A câmera não está transmitindo no momento. Assim que ela iniciar, o vídeo aparecerá aqui.</p>
+      <button class="btn btn-secondary" id="btnGoToCamera">
+        Ativar Câmera Local
+      </button>
+    </div>
   </div>
 
   <!-- Video Stream -->
@@ -33,39 +37,40 @@
   <!-- Top Bar -->
   <div class="top-bar" id="topBar" style="display:none;">
     <div class="logo">
-      <div class="logo-icon">👶</div>
+      <i data-lucide="video"></i>
       <span>Kamera</span>
     </div>
-    <div class="status-badge connecting" id="statusBadge">
+    <div class="status-badge live" id="statusBadge">
       <span class="status-dot"></span>
-      <span id="statusText">Conectando…</span>
+      <span id="statusText">Ao Vivo</span>
     </div>
   </div>
 
   <!-- Bottom Bar -->
   <div class="bottom-bar" id="bottomBar" style="display:none;">
-    <button class="btn btn-circle" id="btnGoToCamera" title="Mudar para Câmera">
-      🎥
+    <button class="btn btn-circle" id="btnRotate" title="Rotacionar">
+      <i data-lucide="rotate-cw"></i>
     </button>
-    <button class="btn btn-circle" id="btnRotate" title="Rotacionar Vídeo">
-      🔄
+    <button class="btn btn-circle" id="btnFlipRemote" title="Trocar Lente">
+      <i data-lucide="shuffle"></i>
     </button>
-    <button class="btn btn-circle" id="btnFlipRemote" title="Trocar Câmera Remota">
-      📷
+    <button class="btn btn-circle" id="btnNightVision" title="Visão Noturna">
+      <i data-lucide="moon"></i>
     </button>
-    <button class="btn btn-circle" id="btnNightVision" title="Visão noturna">
-      🌙
+    <button class="btn btn-circle" id="btnMute" title="Áudio">
+      <i data-lucide="volume-x"></i>
     </button>
-    <button class="btn btn-circle" id="btnMute" title="Mute / Unmute">
-      🔊
-    </button>
-    <button class="btn btn-circle" id="btnFullscreen" title="Tela cheia">
-      ⛶
+    <button class="btn btn-circle" id="btnFullscreen" title="Tela Cheia">
+      <i data-lucide="maximize"></i>
     </button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/viewer.js"></script>
+  <script>
+    // Initialize icons
+    lucide.createIcons();
+  </script>
 </body>
 
 </html>
