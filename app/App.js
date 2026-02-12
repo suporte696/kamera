@@ -29,6 +29,8 @@ import {
   Battery,
   Zap
 } from 'lucide-react-native';
+import { Audio } from 'expo-av';
+// import Slider from '@react-native-community/slider'; // Keeping logic simple with Toggle
 import { io } from 'socket.io-client';
 import {
   RTCPeerConnection,
@@ -61,7 +63,9 @@ export default function App() {
   const [status, setStatus] = useState('offline'); // 'offline', 'waiting', 'live'
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
-  const [isMuted, setIsMuted] = useState(false); // Unmuted by default for monitoring
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1.0); // Viewer volume (simulated/system)
+  const [isSpeaker, setIsSpeaker] = useState(true); // Default to Speaker (Loud)
   const [nightVision, setNightVision] = useState(false);
   const localStreamRef = useRef(null); // Ref to ensure listeners always have current stream
   const [rotation, setRotation] = useState(0);
@@ -161,11 +165,19 @@ export default function App() {
       }
     });
 
-    // Retry registration if not confirmed
+    // Retry registration if not confirmed (Camera)
     const registrationInterval = setInterval(() => {
       if (mode === 'camera' && socketRef.current?.connected) {
         console.log('[Signal] Tentando registrar broadcaster novamente...');
         socketRef.current.emit('register-broadcaster');
+      }
+    }, 5000);
+
+    // Retry request-offer if not connected (Viewer)
+    const viewerInterval = setInterval(() => {
+      if (mode === 'viewer' && socketRef.current?.connected && status !== 'live') {
+        console.log('[Signal] Buscando câmera (request-offer)...');
+        socketRef.current.emit('request-offer');
       }
     }, 5000);
 
@@ -176,15 +188,40 @@ export default function App() {
 
     return () => {
       clearInterval(registrationInterval);
+      clearInterval(viewerInterval);
       cleanup();
     };
   }, [mode]);
+
+  // ── Audio Session & Routing ───────────────────
+  useEffect(() => {
+    if (mode === 'viewer') {
+      const configureAudio = async () => {
+        try {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: !isSpeaker, // Toggle based on state
+          });
+          console.log('[Audio] Configurado. Speaker:', isSpeaker);
+        } catch (e) {
+          console.error('[Audio] Falha na configuração:', e);
+        }
+      };
+      configureAudio();
+    }
+  }, [mode, isSpeaker]);
 
   // Handle Mute/Unmute state on remote tracks
   useEffect(() => {
     if (remoteStream && mode === 'viewer') {
       remoteStream.getAudioTracks().forEach(track => {
         track.enabled = !isMuted;
+        // Note: WebRTC tracks don't support direct volume set in RN without native mods/GainNode.
+        // The slider will ideally be visual or control system volume context if we added that lib.
+        // For now, relies on isSpeaker for major gain.
       });
     }
   }, [isMuted, remoteStream, mode]);
@@ -499,6 +536,20 @@ export default function App() {
               onPress={() => { resetInactivityTimer(); setIsMuted(!isMuted); }}
             >
               {isMuted ? <VolumeX size={22} color={COLORS.textMuted} /> : <Volume2 size={22} color="#fff" />}
+            </TouchableOpacity>
+
+            {/* Speaker Toggle (Boost) */}
+            <TouchableOpacity
+              style={[styles.circleBtn, isSpeaker && styles.circleBtnActive, { marginLeft: 8 }]}
+              onPress={() => { resetInactivityTimer(); setIsSpeaker(!isSpeaker); }}
+            >
+              {isSpeaker ? (
+                <Volume2 size={24} color="#fff" /> // Loud
+              ) : (
+                <View style={{ transform: [{ scale: 0.7 }] }}>
+                  <Volume2 size={24} color={COLORS.textMuted} />
+                </View> // Quiet/Earpiece representation
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.circleBtn, { borderColor: COLORS.danger, backgroundColor: 'rgba(239, 68, 68, 0.1)' }]} onPress={() => { cleanup(); setMode('choice'); }}>

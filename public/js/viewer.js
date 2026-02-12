@@ -17,13 +17,19 @@
     const btnFlipRemote = document.getElementById('btnFlipRemote');
     const btnJoinViewer = document.getElementById('btnJoinViewer');
     const btnBackToHome = document.getElementById('btnBackToHome');
+    const volumeSlider = document.getElementById('volumeSlider');
+
 
     // ── State ────────────────────────────────────────
     let socket = null;
     let pc = null;
-    let isMuted = false; // Unmuted by default for monitor usage
+    let isMuted = false;
     let reconnectTimer = null;
     let nightVisionEnabled = false;
+    let audioCtx = null;
+    let gainNode = null;
+    let sourceNode = null;
+
     let rotation = 0; // Start at 0 to avoid initial crop
     let currentScale = 1; // Dedicated scale variable for smooth pinching
 
@@ -88,6 +94,10 @@
             pc.ontrack = (e) => {
                 if (e.streams && e.streams[0]) {
                     remoteVideo.srcObject = e.streams[0];
+
+                    // Initialize Web Audio API for Boost
+                    initAudioContext(e.streams[0]);
+
                     // Safari Fix: Explicitly call play() on track arrival
                     remoteVideo.play().catch(err => {
                         console.log('Autoplay blocked, waiting for interaction or retrying...', err);
@@ -99,8 +109,14 @@
             pc.oniceconnectionstatechange = () => {
                 switch (pc.iceConnectionState) {
                     case 'connected':
-                        remoteVideo.muted = isMuted;
+                        // remoteVideo.muted = isMuted; // Controlled via Web Audio now
                         remoteVideo.play();
+
+                        // Resume AudioContext if suspended (browser policy)
+                        if (audioCtx && audioCtx.state === 'suspended') {
+                            audioCtx.resume();
+                        }
+
                         showLive();
 
                         // Sync UI button
@@ -142,7 +158,42 @@
             cleanupPC();
             showWaiting();
         });
+        socket.on('broadcaster-left', () => {
+            cleanupPC();
+            showWaiting();
+        });
     }
+
+    // ── Audio Context & Gain ─────────────────────────
+    function initAudioContext(stream) {
+        if (audioCtx) return;
+
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            gainNode = audioCtx.createGain();
+
+            // Mute original video element to prevent echo/double audio
+            remoteVideo.muted = true;
+            // But we need to make sure the volume property is up (even if muted prop is true, sometimes needed for flow)
+            // safer to just not srcObject the audio track to the video element? 
+            // Actually, connecting the stream to AudioContext usually "steals" it or we can just clone it.
+            // Simplest way: remoteVideo.muted = true (done above) and we play via Web Audio.
+
+            sourceNode = audioCtx.createMediaStreamSource(stream);
+            sourceNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // Set initial gain from slider
+            const vol = parseFloat(volumeSlider.value);
+            gainNode.gain.value = isMuted ? 0 : vol;
+
+            console.log('AudioContext initialized. Initial Gain:', vol);
+        } catch (e) {
+            console.error('Web Audio API setup failed:', e);
+        }
+    }
+
 
     // ── UI Events ────────────────────────────────────
     btnJoinViewer.addEventListener('click', () => {
@@ -190,10 +241,34 @@
 
     btnMute.addEventListener('click', () => {
         isMuted = !isMuted;
-        remoteVideo.muted = isMuted;
+
+        // Update Video Element (just in case)
+        remoteVideo.muted = true; // Always muted in DOM, we use AudioContext
+
+        // Update Gain Node
+        if (gainNode) {
+            // Restore to slider value or mute
+            gainNode.gain.value = isMuted ? 0 : parseFloat(volumeSlider.value);
+        }
+
         btnMute.innerHTML = isMuted ? '<i data-lucide="volume-x"></i>' : '<i data-lucide="volume-2"></i>';
         btnMute.classList.toggle('active', isMuted);
+        volumeSlider.disabled = isMuted;
+        volumeSlider.style.opacity = isMuted ? '0.5' : '1';
+
+        // Resume context on unmute interaction
+        if (!isMuted && audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
         lucide.createIcons();
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (gainNode && !isMuted) {
+            gainNode.gain.value = val;
+        }
     });
 
     // ── Zoom & Pan Logic ────────────────────────────
@@ -315,6 +390,13 @@
             pc = null;
         }
         remoteVideo.srcObject = null;
+
+        // Cleanup Audio
+        if (gainNode) { gainNode.disconnect(); gainNode = null; }
+        if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+        // Keep context alive to avoid recreation limits, or close it? 
+        // Best to close to release hardware
+        if (audioCtx) { audioCtx.close(); audioCtx = null; }
     }
 
     function scheduleReconnect() {

@@ -79,9 +79,12 @@
     <button class="btn btn-circle" id="btnNightVision" title="Visão Noturna">
       <i data-lucide="moon"></i>
     </button>
-    <button class="btn btn-circle" id="btnMute" title="Áudio">
-      <i data-lucide="volume-x"></i>
-    </button>
+    <div class="volume-control-group">
+      <button class="btn btn-circle" id="btnMute" title="Áudio">
+        <i data-lucide="volume-x"></i>
+      </button>
+      <input type="range" id="volumeSlider" min="0" max="5" step="0.1" value="1" title="Volume Boost">
+    </div>
     <button class="btn btn-circle" id="btnFullscreen" title="Tela Cheia">
       <i data-lucide="maximize"></i>
     </button>

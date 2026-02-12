@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@config-plugins/react-native-webrtc": "^13.0.0",
+    "@react-native-community/slider": "5.0.1",
     "expo": "~54.0.33",
     "expo-av": "~16.0.8",
     "expo-blur": "~15.0.8",
