@@ -4,11 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Kamera — Sistema de Monitoramento</title>
+  <title>kamera</title>
   <meta name="description" content="Babá eletrônica profissional e segura">
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎥</text></svg>">
+  <link rel="icon" href="/favicon.png">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -17,7 +16,7 @@
   <!-- Home / Choice Screen -->
   <div class="center-message" id="choiceScreen">
     <div class="icon-box">
-      <i data-lucide="video"></i>
+      <img src="/logo.png" alt="kamera" class="brand-logo">
     </div>
     <div class="message-box">
       <h2>Iniciar Sistema</h2>
@@ -40,7 +39,7 @@
   <!-- Waiting Screen -->
   <div class="center-message hidden" id="waitingScreen" style="display:none;">
     <div class="icon-box">
-      <i data-lucide="camera-off"></i>
+      <img src="/logo.png" alt="kamera" class="brand-logo">
     </div>
     <div class="message-box">
       <h2>Aguardando Sinal</h2>
@@ -60,8 +59,7 @@
   <!-- Top Bar -->
   <div class="top-bar" id="topBar" style="display:none;">
     <div class="logo">
-      <i data-lucide="video"></i>
-      <span>Monitor</span>
+      <img src="/logo.png" alt="kamera" class="brand-logo">
     </div>
     <div class="status-badge live" id="statusBadge">
       <span class="status-dot"></span>

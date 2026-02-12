@@ -194,13 +194,12 @@ p {
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  font-weight: 700;
-  font-size: 1rem;
 }
 
-.logo i {
-  color: var(--accent);
-  stroke-width: 2.5;
+.brand-logo {
+  height: 24px;
+  width: auto;
+  object-fit: contain;
 }
 
 .viewer-count {
@@ -358,17 +357,22 @@ p {
 }
 
 .icon-box {
-  width: 96px;
-  height: 96px;
-  background: linear-gradient(135deg, var(--bg-surface), var(--bg-dark));
-  border: 1px solid var(--border);
-  border-radius: 2rem;
+  width: auto;
+  max-width: 240px;
+  height: auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 2rem;
-  color: var(--accent);
-  box-shadow: var(--shadow);
+  box-shadow: none;
+}
+
+.icon-box .brand-logo {
+  height: 60px;
+  width: auto;
 }
 
 /* ── Mobile & Notch ──────────────────────────────── */
