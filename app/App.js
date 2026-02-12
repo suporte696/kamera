@@ -189,8 +189,9 @@ export default function App() {
       const currentTrack = localStream.getVideoTracks()[0];
       const settings = currentTrack.getSettings();
 
-      const newStream = await mediaDevices.getUserMedia({
-        audio: true,
+      // Request ONLY video for the new track
+      const stream = await mediaDevices.getUserMedia({
+        audio: false,
         video: {
           deviceId: settings.deviceId ? { exact: settings.deviceId } : undefined,
           width: enabled ? { ideal: 640 } : { ideal: 1920 },
@@ -199,8 +200,16 @@ export default function App() {
         }
       });
 
-      const newVideoTrack = newStream.getVideoTracks()[0];
-      setLocalStream(newStream);
+      const newVideoTrack = stream.getVideoTracks()[0];
+
+      // Update local stream state
+      const videoTracks = localStream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        localStream.removeTrack(videoTracks[0]);
+        videoTracks[0].stop(); // Stop ONLY the old video track
+      }
+      localStream.addTrack(newVideoTrack);
+      setLocalStream(localStream); // Trigger re-render
 
       if (pcRef.current) {
         const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -208,8 +217,6 @@ export default function App() {
           sender.replaceTrack(newVideoTrack);
         }
       }
-
-      localStream.getTracks().forEach(t => t.stop());
     } catch (err) {
       console.error('Falha ao ativar modo binning:', err);
     }
@@ -223,23 +230,29 @@ export default function App() {
       setCurrentDeviceIndex(nextIndex);
       const nextDevice = videoDevices[nextIndex];
 
-      const newStream = await mediaDevices.getUserMedia({
-        audio: true,
+      // Request ONLY video for the new track
+      const stream = await mediaDevices.getUserMedia({
+        audio: false,
         video: { deviceId: nextDevice.deviceId }
       });
+      const newVideoTrack = stream.getVideoTracks()[0];
 
-      const newVideoTrack = newStream.getVideoTracks()[0];
+      // Update local stream state
+      const videoTracks = localStream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        localStream.removeTrack(videoTracks[0]);
+        videoTracks[0].stop(); // Stop ONLY the old video track
+      }
+      localStream.addTrack(newVideoTrack);
+      setLocalStream(localStream); // Trigger re-render
 
-      setLocalStream(newStream);
-
+      // Update Peer Connection
       if (pcRef.current) {
         const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
         if (sender) {
           sender.replaceTrack(newVideoTrack);
         }
       }
-
-      localStream.getTracks().forEach(t => t.stop());
     } catch (err) {
       console.error('Falha ao trocar câmera:', err);
     }

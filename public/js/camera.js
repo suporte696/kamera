@@ -192,10 +192,13 @@
                 audio: true
             };
 
-            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-            const newVideoTrack = newStream.getVideoTracks()[0];
+            // Request ONLY video for the new track
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: constraints.video
+            });
+            const newVideoTrack = stream.getVideoTracks()[0];
 
-            // Update WebRTC peers
+            // Update WebRTC peers without touching audio
             const promises = Object.values(peerConnections).map(pc => {
                 const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                 if (sender) return sender.replaceTrack(newVideoTrack);
@@ -203,12 +206,16 @@
 
             await Promise.all(promises);
 
-            // Update local view
-            localVideo.srcObject = newStream;
+            // Update local view (keep audio element intact if possible, or just update track)
+            const videoTracks = localStream.getVideoTracks();
+            if (videoTracks.length > 0) {
+                localStream.removeTrack(videoTracks[0]);
+                videoTracks[0].stop(); // Stop ONLY the old video track
+            }
+            localStream.addTrack(newVideoTrack);
 
-            // Clean up old resources
-            localStream.getTracks().forEach(track => track.stop());
-            localStream = newStream;
+            // Re-trigger play to ensure sync
+            localVideo.play().catch(() => { });
 
         } catch (err) {
             console.error('Flip failed:', err);
@@ -244,10 +251,12 @@
                 audio: true
             };
 
-            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-            const newVideoTrack = newStream.getVideoTracks()[0];
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: constraints.video
+            });
+            const newVideoTrack = stream.getVideoTracks()[0];
 
-            // Update WebRTC peers
+            // Update WebRTC peers without touching audio
             const promises = Object.values(peerConnections).map(pc => {
                 const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                 if (sender) return sender.replaceTrack(newVideoTrack);
@@ -256,11 +265,14 @@
             await Promise.all(promises);
 
             // Update local view
-            localVideo.srcObject = newStream;
+            const videoTracks = localStream.getVideoTracks();
+            if (videoTracks.length > 0) {
+                localStream.removeTrack(videoTracks[0]);
+                videoTracks[0].stop(); // Stop ONLY the old video track
+            }
+            localStream.addTrack(newVideoTrack);
 
-            // Clean up old resources
-            localStream.getTracks().forEach(track => track.stop());
-            localStream = newStream;
+            localVideo.play().catch(() => { });
 
             console.log(`Night Mode active: ${enabled}. Resolution: ${enabled ? '640x480 (Sensitive)' : 'HD'}`);
         } catch (err) {
