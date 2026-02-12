@@ -115,8 +115,42 @@
     async function refreshDeviceList() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            videoDevices = devices.filter(d => d.kind === 'videoinput');
-            console.log('Available video devices:', videoDevices);
+            let allVideo = devices.filter(d => d.kind === 'videoinput' && d.deviceId);
+
+            // Filter out duplicates and virtual/composite devices if they share IDs
+            const seen = new Set();
+            const unique = allVideo.filter(d => {
+                if (seen.has(d.deviceId)) return false;
+                seen.add(d.deviceId);
+                return true;
+            });
+
+            // Logical Sort: 
+            // 1. Primary Back (Main)
+            // 2. Secondary Back (Wide, Telephoto, etc)
+            // 3. Front
+            videoDevices = unique.sort((a, b) => {
+                const lA = (a.label || '').toLowerCase();
+                const lB = (b.label || '').toLowerCase();
+
+                const isFrontA = lA.includes('front') || lA.includes('user') || lA.includes('frontal');
+                const isFrontB = lB.includes('front') || lB.includes('user') || lB.includes('frontal');
+
+                // Front cameras go to the end
+                if (isFrontA && !isFrontB) return 1;
+                if (!isFrontA && isFrontB) return -1;
+
+                // For back cameras, try to put "Main/Padrão" first
+                const isMainA = lA.includes('padrão') || lA.includes('main') || (!lA.includes('wide') && !lA.includes('ultra'));
+                const isMainB = lB.includes('padrão') || lB.includes('main') || (!lB.includes('wide') && !lB.includes('ultra'));
+
+                if (isMainA && !isMainB) return -1;
+                if (!isMainA && isMainB) return 1;
+
+                return 0;
+            });
+
+            console.log('Video devices ready:', videoDevices.map(d => d.label || 'id:' + d.deviceId.slice(0, 4)));
         } catch (err) {
             console.error('Error enumerating devices:', err);
         }
@@ -124,50 +158,58 @@
 
     async function toggleCamera() {
         if (!localStream || videoDevices.length < 2) {
-            console.log('No other cameras to switch to.');
+            console.log('Not enough cameras to switch.');
             return;
         }
 
         try {
-            // Cycle to next device
+            // Re-sync index with actual hardware current state
+            const currentTrack = localStream.getVideoTracks()[0];
+            const settings = currentTrack.getSettings();
+            if (settings.deviceId) {
+                const realIndex = videoDevices.findIndex(d => d.deviceId === settings.deviceId);
+                if (realIndex !== -1) currentDeviceIndex = realIndex;
+            }
+
+            // Move to next device in sorted list
             currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
             const nextDevice = videoDevices[currentDeviceIndex];
 
-            console.log(`Switching to camera: ${nextDevice.label || nextDevice.deviceId}`);
+            console.log(`Switching to lens: ${nextDevice.label || nextDevice.deviceId}`);
 
-            // Get new stream from specific device
-            const newStream = await navigator.mediaDevices.getUserMedia({
+            // Constraints for the NEW stream
+            const constraints = {
                 video: {
                     deviceId: { exact: nextDevice.deviceId },
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
                 },
                 audio: true
-            });
+            };
 
+            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
             const newVideoTrack = newStream.getVideoTracks()[0];
 
-            // Replace track in all peer connections
+            // Update WebRTC peers
             const promises = Object.values(peerConnections).map(pc => {
                 const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) {
-                    return sender.replaceTrack(newVideoTrack);
-                }
+                if (sender) return sender.replaceTrack(newVideoTrack);
             });
 
             await Promise.all(promises);
 
-            // Update local preview
+            // Update local view
             localVideo.srcObject = newStream;
 
-            // Stop old tracks
+            // Clean up old resources
             localStream.getTracks().forEach(track => track.stop());
             localStream = newStream;
 
         } catch (err) {
-            console.error('Failed to flip camera:', err);
-            // If specific device fails, try to fallback to any camera
-            alert('Erro ao trocar de lente. Tentando reconectar...');
+            console.error('Flip failed:', err);
+            // On failure, refresh list and alert
+            await refreshDeviceList();
+            alert('Não foi possível alternar para esta câmera.');
         }
     }
 
