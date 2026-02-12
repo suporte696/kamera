@@ -13,6 +13,7 @@
     const btnFullscreen = document.getElementById('btnFullscreen');
     const btnNightVision = document.getElementById('btnNightVision');
     const btnGoToCamera = document.getElementById('btnGoToCamera');
+    const btnRotate = document.getElementById('btnRotate');
 
     // ── State ────────────────────────────────────────
     const socket = io();
@@ -20,6 +21,7 @@
     let isMuted = true; // Start muted for autoplay
     let reconnectTimer = null;
     let nightVisionEnabled = false;
+    let rotation = 90; // Default to vertical as requested
 
     const ICE_SERVERS = [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -123,6 +125,29 @@
     btnGoToCamera.addEventListener('click', () => {
         window.location.href = '/camera.html';
     });
+
+    // Rotate Video
+    btnRotate.addEventListener('click', () => {
+        rotation = (rotation + 90) % 360;
+        updateRotation();
+    });
+
+    function updateRotation() {
+        // Remove all rotation classes
+        remoteVideo.classList.remove('rotate-0', 'rotate-90', 'rotate-180', 'rotate-270');
+        videoContainer.classList.remove('rotated-sideways');
+
+        // Add current rotation
+        remoteVideo.classList.add(`rotate-${rotation}`);
+
+        // If 90 or 270, we're in a "sideways" state
+        if (rotation === 90 || rotation === 270) {
+            videoContainer.classList.add('rotated-sideways');
+        }
+    }
+
+    // Initialize rotation
+    updateRotation();
 
     // ── Night Vision ─────────────────────────────────
     btnNightVision.addEventListener('click', () => {
