@@ -103,12 +103,20 @@ export default function App() {
     socketRef.current = io(SIGNALING_SERVER);
 
     socketRef.current.on('connect', () => {
-      console.log('Connected to server');
+      console.log('[Socket] Conectado ao servidor:', socketRef.current.id);
       if (mode === 'viewer') {
         socketRef.current.emit('request-offer');
       } else if (mode === 'camera') {
         startCamera();
       }
+    });
+
+    socketRef.current.on('connect_error', (err) => {
+      console.error('[Socket] Erro de conexão:', err.message);
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      console.warn('[Socket] Desconectado:', reason);
     });
 
     socketRef.current.on('offer', async ({ sdp }) => {
@@ -139,14 +147,37 @@ export default function App() {
       }
     });
 
-    socketRef.current.on('request-offer', async () => {
+    socketRef.current.on('viewer-joined', async ({ viewerId }) => {
       if (mode === 'camera' && localStreamRef.current) {
-        console.log('[Signal] Enviando offer para novo viewer');
-        await createOffer(localStreamRef.current);
+        console.log('[Signal] Novo viewer detectado:', viewerId);
+        await createOffer(localStreamRef.current, viewerId);
       }
     });
 
-    return cleanup;
+    socketRef.current.on('camera-flip', () => {
+      if (mode === 'camera') {
+        console.log('[Signal] Pedido remoto de troca de câmera');
+        toggleCamera();
+      }
+    });
+
+    // Retry registration if not confirmed
+    const registrationInterval = setInterval(() => {
+      if (mode === 'camera' && socketRef.current?.connected) {
+        console.log('[Signal] Tentando registrar broadcaster novamente...');
+        socketRef.current.emit('register-broadcaster');
+      }
+    }, 5000);
+
+    socketRef.current.on('broadcaster-registered', () => {
+      console.log('[Signal] Confirmado: Este dispositivo é o BROADCASTER oficial');
+      clearInterval(registrationInterval);
+    });
+
+    return () => {
+      clearInterval(registrationInterval);
+      cleanup();
+    };
   }, [mode]);
 
   // Handle Mute/Unmute state on remote tracks
@@ -186,10 +217,9 @@ export default function App() {
       localStreamRef.current = stream;
       setStatus('waiting');
 
-      socketRef.current.on('camera-flip', () => {
-        console.log('[Signal] Recebido pedido remoto para trocar câmera');
-        toggleCamera();
-      });
+      // Register with server so viewers can find us
+      console.log('[Camera] Emitindo register-broadcaster...');
+      socketRef.current.emit('register-broadcaster');
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível acessar a câmera.');
       setMode('choice');
@@ -228,7 +258,8 @@ export default function App() {
       }
 
       // Update local stream state and cleanup old tracks
-      localStream.getTracks().forEach(t => t.stop());
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = stream;
       setLocalStream(stream);
     } catch (err) {
       console.error('Falha ao ativar modo binning:', err);
@@ -274,19 +305,25 @@ export default function App() {
     }
   };
 
-  const createOffer = async (stream) => {
+  const createOffer = async (stream, viewerId) => {
     pcRef.current = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
     stream.getTracks().forEach(track => pcRef.current.addTrack(track, stream));
 
     pcRef.current.onicecandidate = (e) => {
       if (e.candidate) {
-        socketRef.current.emit('ice-candidate', { candidate: e.candidate, target: 'viewer' });
+        socketRef.current.emit('ice-candidate', {
+          candidate: e.candidate,
+          target: viewerId
+        });
       }
     };
 
     const offer = await pcRef.current.createOffer();
     await pcRef.current.setLocalDescription(offer);
-    socketRef.current.emit('offer', { sdp: pcRef.current.localDescription });
+    socketRef.current.emit('offer', {
+      viewerId,
+      sdp: pcRef.current.localDescription
+    });
     setStatus('live');
   };
 
