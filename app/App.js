@@ -370,155 +370,153 @@ export default function App() {
 
   // ── Main UI ────────────────────────────────────
   return (
-    <TouchableWithoutFeedback onPress={resetInactivityTimer}>
-      <View style={styles.container} onStartShouldSetResponderCapture={() => { resetInactivityTimer(); return false; }}>
-        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" hidden={mode === 'viewer'} />
+    <View style={styles.container} onStartShouldSetResponderCapture={() => { resetInactivityTimer(); return false; }}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" hidden={mode === 'viewer'} />
 
-        {mode === 'choice' && (
-          <SafeAreaView style={styles.full}>
-            <ChoiceScreen />
-          </SafeAreaView>
-        )}
+      {mode === 'choice' && (
+        <SafeAreaView style={styles.full}>
+          <ChoiceScreen />
+        </SafeAreaView>
+      )}
 
-        {mode === 'viewer' && (
-          <View style={styles.viewerContainer}>
-            {/* Top Bar (Floating Liquid Glass) */}
-            <BlurView intensity={80} tint="dark" style={styles.floatingTopBar}>
-              <View style={styles.logoAndInfo}>
-                <Image source={require('./assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
-              </View>
-              <View style={[styles.statusBadge, status === 'live' ? styles.statusLive : styles.statusWaiting]}>
-                <View style={[styles.statusDot, status === 'live' && styles.dotLive]} />
-                <Text style={styles.statusText}>{status === 'live' ? 'AO VIVO' : 'CONECTANDO...'}</Text>
-              </View>
-            </BlurView>
-
-            {/* Fullscreen Video Area */}
-            <View style={styles.videoContainer}>
-              {remoteStream ? (
-                <RTCView
-                  streamURL={remoteStream.toURL()}
-                  style={[styles.video, { transform: [{ rotate: `${rotation}deg` }] }]}
-                  objectFit="contain"
-                />
-              ) : (
-                <View style={styles.waitingOverlay}>
-                  <Radio size={48} color={COLORS.accent} />
-                  <Text style={styles.waitingText}>Aguardando sinal da câmera...</Text>
-                </View>
-              )}
+      {mode === 'viewer' && (
+        <View style={styles.viewerContainer}>
+          {/* Top Bar (Floating Liquid Glass) */}
+          <BlurView intensity={80} tint="dark" style={styles.floatingTopBar}>
+            <View style={styles.logoAndInfo}>
+              <Image source={require('./assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
             </View>
-
-            {/* Bottom Bar (Floating Liquid Glass) */}
-            <BlurView intensity={90} tint="dark" style={styles.floatingBottomBar}>
-              <TouchableOpacity style={styles.circleBtn} onPress={() => { resetInactivityTimer(); setRotation((rotation + 90) % 360); }}>
-                <RotateCw size={22} color={COLORS.textMain} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.circleBtn}
-                onPress={() => { resetInactivityTimer(); socketRef.current.emit('camera-flip'); }}
-              >
-                <Shuffle size={20} color={COLORS.textMain} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.circleBtn, nightVision && styles.circleBtnActive]}
-                onPress={() => {
-                  resetInactivityTimer();
-                  const newNightVision = !nightVision;
-                  setNightVision(newNightVision);
-                  if (socketRef.current) {
-                    socketRef.current.emit('night-mode', { enabled: newNightVision });
-                  }
-                }}
-              >
-                <Moon size={22} color={nightVision ? "#fff" : COLORS.textMain} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.circleBtn, !isMuted && styles.circleBtnActive]}
-                onPress={() => { resetInactivityTimer(); setIsMuted(!isMuted); }}
-              >
-                {isMuted ? <VolumeX size={22} color={COLORS.textMuted} /> : <Volume2 size={22} color="#fff" />}
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[styles.circleBtn, { borderColor: COLORS.danger, backgroundColor: 'rgba(239, 68, 68, 0.1)' }]} onPress={() => { cleanup(); setMode('choice'); }}>
-                <Home size={20} color={COLORS.danger} />
-              </TouchableOpacity>
-            </BlurView>
-          </View>
-        )}
-
-        {mode === 'camera' && (
-          <View style={styles.viewerContainer}>
-            {/* Top Bar (Floating Liquid Glass) */}
-            <BlurView intensity={80} tint="dark" style={styles.floatingTopBar}>
-              <View style={styles.logoAndInfo}>
-                <Image source={require('./assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
-              </View>
-              <View style={[styles.statusBadge, status === 'waiting' ? styles.statusWaiting : styles.statusLive]}>
-                <View style={[styles.statusDot, status === 'live' && styles.dotLive]} />
-                <Text style={styles.statusText}>{status === 'live' ? 'AO VIVO' : 'AGUARDANDO...'}</Text>
-              </View>
-            </BlurView>
-
-            {/* Fullscreen Camera Preview Area */}
-            <View style={styles.videoContainer}>
-              {localStream ? (
-                <RTCView
-                  streamURL={localStream.toURL()}
-                  style={styles.video}
-                  objectFit="cover"
-                />
-              ) : (
-                <View style={styles.waitingOverlay}>
-                  <Radio size={48} color={COLORS.accent} />
-                  <Text style={styles.waitingText}>Iniciando câmera...</Text>
-                </View>
-              )}
+            <View style={[styles.statusBadge, status === 'live' ? styles.statusLive : styles.statusWaiting]}>
+              <View style={[styles.statusDot, status === 'live' && styles.dotLive]} />
+              <Text style={styles.statusText}>{status === 'live' ? 'AO VIVO' : 'CONECTANDO...'}</Text>
             </View>
+          </BlurView>
 
-            {/* Bottom Bar (Floating Liquid Glass) */}
-            <BlurView intensity={90} tint="dark" style={styles.floatingBottomBar}>
-              <TouchableOpacity style={styles.circleBtn} onPress={() => { resetInactivityTimer(); setMode('viewer'); }}>
-                <Monitor size={22} color={COLORS.textMain} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.circleBtn}
-                onPress={() => {
-                  resetInactivityTimer();
-                  toggleCamera();
-                }}
-              >
-                <Repeat size={22} color={COLORS.textMain} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.circleBtn, { borderColor: COLORS.danger, backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}
-                onPress={() => { cleanup(); setMode('choice'); }}
-              >
-                <Square size={20} color={COLORS.danger} fill={COLORS.danger} />
-              </TouchableOpacity>
-            </BlurView>
-
-            {/* Battery Saving Overlay (Câmera) */}
-            {isBatterySaving && (
-              <View style={styles.batterySavingOverlay}>
-                <Battery size={48} color={COLORS.success} />
-                <Text style={styles.batterySavingText}>Transmissão Segura Ativa</Text>
-                <Text style={styles.batterySavingSubtext}>Tela escurecida para poupar bateria</Text>
-                <TouchableOpacity style={styles.wakeBtn} onPress={resetInactivityTimer}>
-                  <Text style={styles.wakeBtnText}>ACORDAR TELA</Text>
-                </TouchableOpacity>
+          {/* Fullscreen Video Area */}
+          <View style={styles.videoContainer}>
+            {remoteStream ? (
+              <RTCView
+                streamURL={remoteStream.toURL()}
+                style={[styles.video, { transform: [{ rotate: `${rotation}deg` }] }]}
+                objectFit="contain"
+              />
+            ) : (
+              <View style={styles.waitingOverlay}>
+                <Radio size={48} color={COLORS.accent} />
+                <Text style={styles.waitingText}>Aguardando sinal da câmera...</Text>
               </View>
             )}
           </View>
-        )}
 
-      </View>
-    </TouchableWithoutFeedback>
+          {/* Bottom Bar (Floating Liquid Glass) */}
+          <BlurView intensity={90} tint="dark" style={styles.floatingBottomBar}>
+            <TouchableOpacity style={styles.circleBtn} onPress={() => { resetInactivityTimer(); setRotation((rotation + 90) % 360); }}>
+              <RotateCw size={22} color={COLORS.textMain} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.circleBtn}
+              onPress={() => { resetInactivityTimer(); socketRef.current.emit('camera-flip'); }}
+            >
+              <Shuffle size={20} color={COLORS.textMain} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.circleBtn, nightVision && styles.circleBtnActive]}
+              onPress={() => {
+                resetInactivityTimer();
+                const newNightVision = !nightVision;
+                setNightVision(newNightVision);
+                if (socketRef.current) {
+                  socketRef.current.emit('night-mode', { enabled: newNightVision });
+                }
+              }}
+            >
+              <Moon size={22} color={nightVision ? "#fff" : COLORS.textMain} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.circleBtn, !isMuted && styles.circleBtnActive]}
+              onPress={() => { resetInactivityTimer(); setIsMuted(!isMuted); }}
+            >
+              {isMuted ? <VolumeX size={22} color={COLORS.textMuted} /> : <Volume2 size={22} color="#fff" />}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.circleBtn, { borderColor: COLORS.danger, backgroundColor: 'rgba(239, 68, 68, 0.1)' }]} onPress={() => { cleanup(); setMode('choice'); }}>
+              <Home size={20} color={COLORS.danger} />
+            </TouchableOpacity>
+          </BlurView>
+        </View>
+      )}
+
+      {mode === 'camera' && (
+        <View style={styles.viewerContainer}>
+          {/* Top Bar (Floating Liquid Glass) */}
+          <BlurView intensity={80} tint="dark" style={styles.floatingTopBar}>
+            <View style={styles.logoAndInfo}>
+              <Image source={require('./assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
+            </View>
+            <View style={[styles.statusBadge, status === 'waiting' ? styles.statusWaiting : styles.statusLive]}>
+              <View style={[styles.statusDot, status === 'live' && styles.dotLive]} />
+              <Text style={styles.statusText}>{status === 'live' ? 'AO VIVO' : 'AGUARDANDO...'}</Text>
+            </View>
+          </BlurView>
+
+          {/* Fullscreen Camera Preview Area */}
+          <View style={styles.videoContainer}>
+            {localStream ? (
+              <RTCView
+                streamURL={localStream.toURL()}
+                style={styles.video}
+                objectFit="cover"
+              />
+            ) : (
+              <View style={styles.waitingOverlay}>
+                <Radio size={48} color={COLORS.accent} />
+                <Text style={styles.waitingText}>Iniciando câmera...</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Bottom Bar (Floating Liquid Glass) */}
+          <BlurView intensity={90} tint="dark" style={styles.floatingBottomBar}>
+            <TouchableOpacity style={styles.circleBtn} onPress={() => { resetInactivityTimer(); setMode('viewer'); }}>
+              <Monitor size={22} color={COLORS.textMain} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.circleBtn}
+              onPress={() => {
+                resetInactivityTimer();
+                toggleCamera();
+              }}
+            >
+              <Repeat size={22} color={COLORS.textMain} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.circleBtn, { borderColor: COLORS.danger, backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}
+              onPress={() => { cleanup(); setMode('choice'); }}
+            >
+              <Square size={20} color={COLORS.danger} fill={COLORS.danger} />
+            </TouchableOpacity>
+          </BlurView>
+
+          {/* Battery Saving Overlay (Câmera) */}
+          {isBatterySaving && (
+            <View style={styles.batterySavingOverlay}>
+              <Battery size={48} color={COLORS.success} />
+              <Text style={styles.batterySavingText}>Transmissão Segura Ativa</Text>
+              <Text style={styles.batterySavingSubtext}>Tela escurecida para poupar bateria</Text>
+              <TouchableOpacity style={styles.wakeBtn} onPress={resetInactivityTimer}>
+                <Text style={styles.wakeBtnText}>ACORDAR TELA</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+
+    </View>
   );
 }
 
@@ -548,9 +546,8 @@ const styles = StyleSheet.create({
     width: 400,
     height: 400,
     backgroundColor: COLORS.accent,
-    opacity: 0.1,
+    opacity: 0.05,
     borderRadius: 200,
-    filter: 'blur(80px)', // Apenas referencial, no RN usamos o shadow ou View vazia
   },
   choiceContent: {
     flex: 1,
