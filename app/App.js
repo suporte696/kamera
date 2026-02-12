@@ -130,6 +130,13 @@ export default function App() {
       if (mode === 'viewer') setStatus('waiting');
     });
 
+    socketRef.current.on('night-mode-toggle', async ({ enabled }) => {
+      if (mode === 'camera') {
+        console.log('Troca de sensibilidade (Night Mode):', enabled);
+        await toggleNightMode(enabled);
+      }
+    });
+
     return cleanup;
   }, [mode]);
 
@@ -171,6 +178,40 @@ export default function App() {
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível acessar a câmera.');
       setMode('choice');
+    }
+  };
+
+  const toggleNightMode = async (enabled) => {
+    if (!localStream) return;
+
+    try {
+      // Re-sync constraints with lower resolution for binning
+      const currentTrack = localStream.getVideoTracks()[0];
+      const settings = currentTrack.getSettings();
+
+      const newStream = await mediaDevices.getUserMedia({
+        audio: true,
+        video: {
+          deviceId: settings.deviceId ? { exact: settings.deviceId } : undefined,
+          width: enabled ? { ideal: 640 } : { ideal: 1920 },
+          height: enabled ? { ideal: 480 } : { ideal: 1080 },
+          frameRate: enabled ? { ideal: 15 } : { ideal: 30 },
+        }
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      setLocalStream(newStream);
+
+      if (pcRef.current) {
+        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+          sender.replaceTrack(newVideoTrack);
+        }
+      }
+
+      localStream.getTracks().forEach(t => t.stop());
+    } catch (err) {
+      console.error('Falha ao ativar modo binning:', err);
     }
   };
 
@@ -372,7 +413,14 @@ export default function App() {
 
               <TouchableOpacity
                 style={[styles.circleBtn, nightVision && styles.circleBtnActive]}
-                onPress={() => { resetInactivityTimer(); setNightVision(!nightVision); }}
+                onPress={() => {
+                  resetInactivityTimer();
+                  const newNightVision = !nightVision;
+                  setNightVision(newNightVision);
+                  if (socketRef.current) {
+                    socketRef.current.emit('night-mode', { enabled: newNightVision });
+                  }
+                }}
               >
                 <Moon size={22} color={nightVision ? "#fff" : COLORS.textMain} />
               </TouchableOpacity>
@@ -659,7 +707,7 @@ const styles = StyleSheet.create({
   },
   nightVisionLift: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)', // Máximo levantamento de pretos
+    backgroundColor: 'rgba(255, 255, 255, 0.6)', // Ganho máximo de hardware simulado
     pointerEvents: 'none',
     zIndex: 5,
   },

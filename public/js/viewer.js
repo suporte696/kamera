@@ -174,6 +174,11 @@
         remoteVideo.classList.toggle('night-vision', nightVisionEnabled);
         videoContainer.classList.toggle('night-vision-active', nightVisionEnabled);
         btnNightVision.classList.toggle('active', nightVisionEnabled);
+
+        // Signal camera to toggle high-sensitivity (binning) mode
+        if (socket) {
+            socket.emit('night-mode', { enabled: nightVisionEnabled });
+        }
     });
 
     btnMute.addEventListener('click', () => {

@@ -75,6 +75,13 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('night-mode', ({ enabled }) => {
+        if (broadcaster) {
+            console.log(`[night-mode] ${enabled ? 'ON' : 'OFF'}`);
+            io.to(broadcaster).emit('night-mode-toggle', { enabled });
+        }
+    });
+
     // Disconnect handling
     socket.on('disconnect', () => {
         console.log(`[disconnect] ${socket.id}`);

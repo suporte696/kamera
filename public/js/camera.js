@@ -225,6 +225,51 @@
     // Remote flip request from viewer
     socket.on('camera-flip', toggleCamera);
 
+    async function toggleNightMode({ enabled }) {
+        try {
+            console.log(`Night Mode transition: ${enabled ? 'ON' : 'OFF'}`);
+
+            // Re-sync index with actual hardware current state
+            const currentTrack = localStream.getVideoTracks()[0];
+            const settings = currentTrack.getSettings();
+
+            const constraints = {
+                video: {
+                    deviceId: settings.deviceId ? { exact: settings.deviceId } : undefined,
+                    facingMode: settings.deviceId ? undefined : { ideal: 'environment' },
+                    width: enabled ? { ideal: 640 } : { ideal: 1920 },
+                    height: enabled ? { ideal: 480 } : { ideal: 1080 },
+                    frameRate: enabled ? { ideal: 15, max: 15 } : { ideal: 30, max: 60 },
+                },
+                audio: true
+            };
+
+            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+            const newVideoTrack = newStream.getVideoTracks()[0];
+
+            // Update WebRTC peers
+            const promises = Object.values(peerConnections).map(pc => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) return sender.replaceTrack(newVideoTrack);
+            });
+
+            await Promise.all(promises);
+
+            // Update local view
+            localVideo.srcObject = newStream;
+
+            // Clean up old resources
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = newStream;
+
+            console.log(`Night Mode active: ${enabled}. Resolution: ${enabled ? '640x480 (Sensitive)' : 'HD'}`);
+        } catch (err) {
+            console.error('Night Mode switch failed:', err);
+        }
+    }
+
+    socket.on('night-mode-toggle', toggleNightMode);
+
     // A viewer joined — create offer for them
     socket.on('viewer-joined', async ({ viewerId }) => {
         console.log(`Viewer joined: ${viewerId}`);
