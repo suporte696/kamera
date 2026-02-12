@@ -13,12 +13,14 @@
     const statusText = document.getElementById('statusText');
     const viewerNum = document.getElementById('viewerNum');
     const btnGoToViewer = document.getElementById('btnGoToViewer');
+    const btnFlip = document.getElementById('btnFlip');
 
     // ── State ────────────────────────────────────────
     const socket = io();
     let localStream = null;
     const peerConnections = {}; // viewerId → RTCPeerConnection
     let viewerCount = 0;
+    let currentFacingMode = 'environment'; // Start with back camera
 
     const ICE_SERVERS = [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -41,7 +43,7 @@
 
             localStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: { ideal: 'environment' },
+                    facingMode: { ideal: currentFacingMode },
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
                 },
@@ -94,6 +96,52 @@
 
         socket.disconnect();
         socket.connect();
+    });
+
+    // ── Flip Camera ──────────────────────────────────
+    btnFlip.addEventListener('click', async () => {
+        if (!localStream) return;
+
+        try {
+            // Toggle facing mode
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+
+            // Get new stream
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: currentFacingMode },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                },
+                audio: true
+            });
+
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            const oldVideoTrack = localStream.getVideoTracks()[0];
+
+            // Replace track in all peer connections
+            const promises = Object.values(peerConnections).map(pc => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    return sender.replaceTrack(newVideoTrack);
+                }
+            });
+
+            await Promise.all(promises);
+
+            // Update local preview
+            localVideo.srcObject = newStream;
+
+            // Stop old tracks
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = newStream;
+
+            console.log('Camera flipped to:', currentFacingMode);
+
+        } catch (err) {
+            console.error('Failed to flip camera:', err);
+            alert('Erro ao trocar de câmera.');
+        }
     });
 
     // ── Signaling Events ─────────────────────────────
