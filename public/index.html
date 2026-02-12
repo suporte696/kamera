@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Kamera — Monitor</title>
-  <meta name="description" content="Assistir câmera como babá eletrônica">
+  <title>Kamera — Sistema de Monitoramento</title>
+  <meta name="description" content="Babá eletrônica profissional e segura">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎥</text></svg>">
@@ -14,16 +14,39 @@
 
 <body>
 
+  <!-- Home / Choice Screen -->
+  <div class="center-message" id="choiceScreen">
+    <div class="icon-box">
+      <i data-lucide="video"></i>
+    </div>
+    <div class="message-box">
+      <h2>Iniciar Sistema</h2>
+      <p>Escolha o modo de operação para este dispositivo:</p>
+
+      <div class="choice-grid">
+        <button class="btn btn-primary-light" onclick="location.href='/camera.html'">
+          <i data-lucide="camera"></i>
+          <span>Modo Câmera</span>
+        </button>
+
+        <button class="btn btn-secondary-light" id="btnJoinViewer">
+          <i data-lucide="monitor"></i>
+          <span>Modo Monitor</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Waiting Screen -->
-  <div class="center-message" id="waitingScreen">
+  <div class="center-message hidden" id="waitingScreen" style="display:none;">
     <div class="icon-box">
       <i data-lucide="camera-off"></i>
     </div>
     <div class="message-box">
       <h2>Aguardando Sinal</h2>
-      <p>A câmera não está transmitindo no momento. Assim que ela iniciar, o vídeo aparecerá aqui.</p>
-      <button class="btn btn-secondary" id="btnGoToCamera">
-        Ativar Câmera Local
+      <p>O monitor está ativo, mas não há sinal de vídeo. Inicie a transmissão no outro dispositivo.</p>
+      <button class="btn btn-secondary" id="btnBackToHome">
+        Voltar ao Início
       </button>
     </div>
   </div>
@@ -38,7 +61,7 @@
   <div class="top-bar" id="topBar" style="display:none;">
     <div class="logo">
       <i data-lucide="video"></i>
-      <span>Kamera</span>
+      <span>Monitor</span>
     </div>
     <div class="status-badge live" id="statusBadge">
       <span class="status-dot"></span>
@@ -67,10 +90,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/viewer.js"></script>
-  <script>
-    // Initialize icons
-    lucide.createIcons();
-  </script>
 </body>
 
 </html>

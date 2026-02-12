@@ -271,9 +271,63 @@ p {
   box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
 }
 
+.btn-primary-light,
+.btn-secondary-light {
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  height: auto;
+  min-height: 120px;
+  border-radius: 1.5rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+}
+
+.btn-primary-light {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary-light i {
+  font-size: 1.5rem;
+}
+
+.btn-secondary-light {
+  background: var(--bg-surface);
+  color: var(--text-main);
+}
+
+.btn-secondary-light:hover {
+  background: var(--bg-card);
+}
+
+.btn-primary-light:hover {
+  background: #5558e6;
+  transform: translateY(-4px);
+  box-shadow: 0 15px 30px -10px rgba(99, 102, 241, 0.5);
+}
+
+.btn-secondary-light:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+}
+
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-card);
+  border-color: var(--text-muted);
 }
 
 /* ── Interactive Screens ──────────────────────────── */
@@ -288,6 +342,19 @@ p {
   padding: 2.5rem;
   background-color: var(--bg-dark);
   z-index: 50;
+}
+
+.message-box {
+  width: 100%;
+  max-width: 320px;
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+  width: 100%;
 }
 
 .icon-box {
