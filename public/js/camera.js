@@ -20,7 +20,8 @@
     let localStream = null;
     const peerConnections = {}; // viewerId → RTCPeerConnection
     let viewerCount = 0;
-    let currentFacingMode = 'environment'; // Start with back camera
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
 
     const ICE_SERVERS = [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -41,14 +42,26 @@
             btnStart.disabled = true;
             btnStart.textContent = 'Abrindo câmera…';
 
+            // First time, just get the default (back preferred)
             localStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: { ideal: currentFacingMode },
+                    facingMode: { ideal: 'environment' },
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
                 },
                 audio: true,
             });
+
+            // After getting permission, list all devices
+            await refreshDeviceList();
+
+            // Find which device we are actually using
+            const currentTrack = localStream.getVideoTracks()[0];
+            const settings = currentTrack.getSettings();
+            if (settings.deviceId) {
+                currentDeviceIndex = videoDevices.findIndex(d => d.deviceId === settings.deviceId);
+                if (currentDeviceIndex === -1) currentDeviceIndex = 0;
+            }
 
             localVideo.srcObject = localStream;
 
@@ -99,17 +112,33 @@
     });
 
     // ── Flip Camera ──────────────────────────────────
+    async function refreshDeviceList() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            videoDevices = devices.filter(d => d.kind === 'videoinput');
+            console.log('Available video devices:', videoDevices);
+        } catch (err) {
+            console.error('Error enumerating devices:', err);
+        }
+    }
+
     async function toggleCamera() {
-        if (!localStream) return;
+        if (!localStream || videoDevices.length < 2) {
+            console.log('No other cameras to switch to.');
+            return;
+        }
 
         try {
-            // Toggle facing mode
-            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            // Cycle to next device
+            currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
+            const nextDevice = videoDevices[currentDeviceIndex];
 
-            // Get new stream
+            console.log(`Switching to camera: ${nextDevice.label || nextDevice.deviceId}`);
+
+            // Get new stream from specific device
             const newStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: { ideal: currentFacingMode },
+                    deviceId: { exact: nextDevice.deviceId },
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
                 },
@@ -135,11 +164,10 @@
             localStream.getTracks().forEach(track => track.stop());
             localStream = newStream;
 
-            console.log('Camera flipped to:', currentFacingMode);
-
         } catch (err) {
             console.error('Failed to flip camera:', err);
-            alert('Erro ao trocar de câmera.');
+            // If specific device fails, try to fallback to any camera
+            alert('Erro ao trocar de lente. Tentando reconectar...');
         }
     }
 
