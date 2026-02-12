@@ -64,13 +64,18 @@ p {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s ease, scale 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: zoom-in;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
 }
 
-.video-container video.zoomed {
-  scale: 2;
-  cursor: zoom-out;
+.video-container.has-zoom video {
+  cursor: move;
+}
+
+.video-container.is-dragging video {
+  cursor: grabbing;
 }
 
 /* ── Rotation Classes ────────────────────────────── */

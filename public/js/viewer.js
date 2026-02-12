@@ -26,6 +26,23 @@
     let nightVisionEnabled = false;
     let rotation = 90;
 
+    // ── Interaction State (Zoom & Pan) ──────────────
+    let zoomLevel = 0; // 0, 1, 2 (corresponds to 1x, 2.5x, 4x)
+    const zoomScales = [1, 2.5, 4];
+    let isDragging = false;
+    let startX, startY;
+    let translateX = 0, translateY = 0;
+    let lastTranslateX = 0, lastTranslateY = 0;
+
+    function updateTransform() {
+        const scale = zoomScales[zoomLevel];
+        // Combine rotation and zoom/pan
+        remoteVideo.style.transform = `rotate(${rotation}deg) scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+
+        videoContainer.classList.toggle('has-zoom', zoomLevel > 0);
+        videoContainer.classList.toggle('is-dragging', isDragging);
+    }
+
     const ICE_SERVERS = [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
@@ -124,11 +141,19 @@
     btnRotate.addEventListener('click', () => {
         rotation = (rotation + 90) % 360;
         updateRotation();
+        updateTransform();
     });
 
     btnFlipRemote.addEventListener('click', () => {
         if (socket) socket.emit('camera-flip');
     });
+
+    function updateRotation() {
+        videoContainer.classList.remove('rotated-sideways');
+        if (rotation === 90 || rotation === 270) {
+            videoContainer.classList.add('rotated-sideways');
+        }
+    }
 
     btnNightVision.addEventListener('click', () => {
         nightVisionEnabled = !nightVisionEnabled;
@@ -145,6 +170,60 @@
         lucide.createIcons();
     });
 
+    // ── Zoom & Pan Logic ────────────────────────────
+    remoteVideo.addEventListener('dblclick', (e) => {
+        zoomLevel = (zoomLevel + 1) % zoomScales.length;
+        if (zoomLevel === 0) {
+            translateX = 0; translateY = 0;
+            lastTranslateX = 0; lastTranslateY = 0;
+        }
+        remoteVideo.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        updateTransform();
+    });
+
+    const startDrag = (e) => {
+        if (zoomLevel === 0) return;
+        isDragging = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        startX = clientX; startY = clientY;
+        remoteVideo.style.transition = 'none';
+        updateTransform();
+    };
+
+    const doDrag = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const dx = (clientX - startX) / zoomScales[zoomLevel];
+        const dy = (clientY - startY) / zoomScales[zoomLevel];
+
+        let adjX = dx, adjY = dy;
+        if (rotation === 90) { adjX = dy; adjY = -dx; }
+        else if (rotation === 180) { adjX = -dx; adjY = -dy; }
+        else if (rotation === 270) { adjX = -dy; adjY = dx; }
+
+        translateX = lastTranslateX + adjX;
+        translateY = lastTranslateY + adjY;
+        updateTransform();
+    };
+
+    const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        lastTranslateX = translateX; lastTranslateY = translateY;
+        remoteVideo.style.transition = 'transform 0.3s ease-out';
+        updateTransform();
+    };
+
+    remoteVideo.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('mouseup', endDrag);
+    remoteVideo.addEventListener('touchstart', startDrag, { passive: false });
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    window.addEventListener('touchend', endDrag);
+
     btnFullscreen.addEventListener('click', () => {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(() => { });
@@ -153,10 +232,7 @@
         }
     });
 
-    // ── Native Zoom (Double-Click) ──────────────────
-    remoteVideo.addEventListener('dblclick', () => {
-        remoteVideo.classList.toggle('zoomed');
-    });
+
 
     // ── UI Helpers ───────────────────────────────────
     function showChoice() {
@@ -200,9 +276,7 @@
     }
 
     function updateRotation() {
-        remoteVideo.classList.remove('rotate-0', 'rotate-90', 'rotate-180', 'rotate-270');
         videoContainer.classList.remove('rotated-sideways');
-        remoteVideo.classList.add(`rotate-${rotation}`);
         if (rotation === 90 || rotation === 270) {
             videoContainer.classList.add('rotated-sideways');
         }
