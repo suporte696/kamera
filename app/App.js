@@ -63,6 +63,7 @@ export default function App() {
   const [remoteStream, setRemoteStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false); // Unmuted by default for monitoring
   const [nightVision, setNightVision] = useState(false);
+  const localStreamRef = useRef(null); // Ref to ensure listeners always have current stream
   const [rotation, setRotation] = useState(0);
   const [isBatterySaving, setIsBatterySaving] = useState(false);
   const [lastInteraction, setLastInteraction] = useState(Date.now());
@@ -132,8 +133,16 @@ export default function App() {
 
     socketRef.current.on('night-mode-toggle', async ({ enabled }) => {
       if (mode === 'camera') {
-        console.log('Troca de sensibilidade (Night Mode):', enabled);
+        console.log('[Signal] Troca remota de sensibilidade:', enabled);
+        setNightVision(enabled);
         await toggleNightMode(enabled);
+      }
+    });
+
+    socketRef.current.on('request-offer', async () => {
+      if (mode === 'camera' && localStreamRef.current) {
+        console.log('[Signal] Enviando offer para novo viewer');
+        await createOffer(localStreamRef.current);
       }
     });
 
@@ -174,14 +183,11 @@ export default function App() {
       });
 
       setLocalStream(stream);
+      localStreamRef.current = stream;
       setStatus('waiting');
 
-      socketRef.current.on('request-offer', async () => {
-        await createOffer(stream);
-      });
-
       socketRef.current.on('camera-flip', () => {
-        console.log('Recebido pedido remoto para trocar câmera');
+        console.log('[Signal] Recebido pedido remoto para trocar câmera');
         toggleCamera();
       });
     } catch (err) {
@@ -200,12 +206,12 @@ export default function App() {
 
       // Request BOTH video and audio for the new track for absolute sync
       const stream = await mediaDevices.getUserMedia({
-        audio: true,
+        audio: true, // Maintain audio
         video: {
           deviceId: settings.deviceId ? { exact: settings.deviceId } : undefined,
           width: enabled ? { ideal: 640 } : { ideal: 1920 },
           height: enabled ? { ideal: 480 } : { ideal: 1080 },
-          frameRate: enabled ? { ideal: 15 } : { ideal: 30 },
+          frameRate: enabled ? { ideal: 15, max: 15 } : { ideal: 30, max: 30 },
         }
       });
 
@@ -240,7 +246,12 @@ export default function App() {
       // Request BOTH tracks
       const stream = await mediaDevices.getUserMedia({
         audio: true,
-        video: { deviceId: nextDevice.deviceId }
+        video: {
+          deviceId: nextDevice.deviceId,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        }
       });
       const newVideoTrack = stream.getVideoTracks()[0];
       const newAudioTrack = stream.getAudioTracks()[0];
@@ -255,7 +266,8 @@ export default function App() {
       }
 
       // Cleanup
-      localStream.getTracks().forEach(t => t.stop());
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = stream;
       setLocalStream(stream);
     } catch (err) {
       console.error('Falha ao trocar câmera:', err);
@@ -332,7 +344,10 @@ export default function App() {
         <View style={styles.cardContainer}>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => setMode('viewer')}
+            onPress={() => {
+              console.log('[Choice] Clicou em Modo Monitor');
+              setMode('viewer');
+            }}
             style={styles.cardOuter}
           >
             <BlurView intensity={25} tint="light" style={styles.glassCard}>
@@ -348,7 +363,10 @@ export default function App() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => setMode('camera')}
+            onPress={() => {
+              console.log('[Choice] Clicou em Modo Câmera');
+              setMode('camera');
+            }}
             style={styles.cardOuter}
           >
             <BlurView intensity={25} tint="light" style={styles.glassCard}>
@@ -369,8 +387,12 @@ export default function App() {
   );
 
   // ── Main UI ────────────────────────────────────
+  useEffect(() => {
+    console.log('[App] Renderizado com sucesso. Modo atual:', mode);
+  }, [mode]);
+
   return (
-    <View style={styles.container} onStartShouldSetResponderCapture={() => { resetInactivityTimer(); return false; }}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" hidden={mode === 'viewer'} />
 
       {mode === 'choice' && (
@@ -457,6 +479,7 @@ export default function App() {
               <Image source={require('./assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
             </View>
             <View style={[styles.statusBadge, status === 'waiting' ? styles.statusWaiting : styles.statusLive]}>
+              {nightVision && <Moon size={14} color={COLORS.success} style={{ marginRight: 6 }} />}
               <View style={[styles.statusDot, status === 'live' && styles.dotLive]} />
               <Text style={styles.statusText}>{status === 'live' ? 'AO VIVO' : 'AGUARDANDO...'}</Text>
             </View>
