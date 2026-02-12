@@ -88,6 +88,25 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/viewer.js"></script>
+
+  <!-- SVG Filters for Advanced Night Vision -->
+  <svg style="display: none;">
+    <filter id="nightVisionFilter">
+      <!-- 1. Gamma Correction: "Lift" midtones (gamma = 0.6) -->
+      <feComponentTransfer>
+        <feFuncR type="gamma" amplitude="1" exponent="0.6" />
+        <feFuncG type="gamma" amplitude="1" exponent="0.6" />
+        <feFuncB type="gamma" amplitude="1" exponent="0.6" />
+      </feComponentTransfer>
+
+      <!-- 2. Grayscale + Green Tint + High Contrast -->
+      <feColorMatrix type="matrix" values="
+        0.33 0.33 0.33 0 0
+        0    1    0    0 0
+        0    0    0    0 0
+        0    0    0    1 0" />
+    </filter>
+  </svg>
 </body>
 
 </html>

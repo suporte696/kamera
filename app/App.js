@@ -349,7 +349,12 @@ export default function App() {
                   <Text style={styles.waitingText}>Aguardando sinal da câmera...</Text>
                 </View>
               )}
-              {nightVision && <View style={styles.nightVisionOverlay} />}
+              {nightVision && (
+                <>
+                  <View style={styles.nightVisionLift} />
+                  <View style={styles.nightVisionOverlay} />
+                </>
+              )}
             </View>
 
             {/* Bottom Bar (Floating Liquid Glass) */}
@@ -652,10 +657,18 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
+  nightVisionLift: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)', // "Levanta" os pretos para cinza escuro
+    pointerEvents: 'none',
+    zIndex: 5,
+  },
   nightVisionOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 255, 0, 0.05)',
+    backgroundColor: 'rgba(0, 255, 0, 0.12)', // Tom verde clássico
+    borderWidth: 0,
     pointerEvents: 'none',
+    zIndex: 6,
   },
   circleBtn: {
     width: 48,
