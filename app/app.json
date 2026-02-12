@@ -17,11 +17,14 @@
       "bundleIdentifier": "com.rkcompany.kamera",
       "infoPlist": {
         "UIBackgroundModes": [
+          "audio",
           "audio"
         ],
         "NSCameraUsageDescription": "kamera precisa de acesso à câmera para transmitir o vídeo.",
-        "NSMicrophoneUsageDescription": "kamera precisa de acesso ao microfone para transmitir o áudio."
-      }
+        "NSMicrophoneUsageDescription": "kamera precisa de acesso ao microfone para transmitir o áudio.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bitcode": false
     },
     "android": {
       "package": "com.rkcompany.kamera",
@@ -29,7 +32,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,6 +50,11 @@
     "plugins": [
       "expo-dev-client",
       "@config-plugins/react-native-webrtc"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8befd39c-e867-4ff3-a522-ca1dd641c52e"
+      }
+    }
   }
 }

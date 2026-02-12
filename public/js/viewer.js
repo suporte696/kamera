@@ -25,6 +25,7 @@
     let reconnectTimer = null;
     let nightVisionEnabled = false;
     let rotation = 0; // Start at 0 to avoid initial crop
+    let currentScale = 1; // Dedicated scale variable for smooth pinching
 
     // ── Interaction State (Zoom & Pan) ──────────────
     let zoomLevel = 0; // 0, 1, 2 (corresponds to 1x, 2.5x, 4x)
@@ -35,11 +36,11 @@
     let lastTranslateX = 0, lastTranslateY = 0;
 
     function updateTransform() {
-        const scale = zoomScales[zoomLevel];
+        const scale = currentScale;
         // Combine rotation and zoom/pan
         remoteVideo.style.transform = `rotate(${rotation}deg) scale(${scale}) translate(${translateX}px, ${translateY}px)`;
 
-        videoContainer.classList.toggle('has-zoom', zoomLevel > 0);
+        videoContainer.classList.toggle('has-zoom', currentScale > 1.1);
         videoContainer.classList.toggle('is-dragging', isDragging);
     }
 
@@ -47,6 +48,8 @@
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
     ];
 
     // ── Socket Management ────────────────────────────
@@ -85,6 +88,11 @@
             pc.ontrack = (e) => {
                 if (e.streams && e.streams[0]) {
                     remoteVideo.srcObject = e.streams[0];
+                    // Safari Fix: Explicitly call play() on track arrival
+                    remoteVideo.play().catch(err => {
+                        console.log('Autoplay blocked, waiting for interaction or retrying...', err);
+                        // Optional: show a "Click to view" button if play fails
+                    });
                 }
             };
 
@@ -106,7 +114,13 @@
             };
 
             await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-            const answer = await pc.createAnswer();
+            let answer = await pc.createAnswer();
+
+            // Safari/iOS Fix: Prioritize H.264 codec in SDP
+            if (answer.sdp) {
+                answer.sdp = prioritizeH264(answer.sdp);
+            }
+
             await pc.setLocalDescription(answer);
             socket.emit('answer', { sdp: pc.localDescription });
         });
@@ -173,6 +187,7 @@
     // ── Zoom & Pan Logic ────────────────────────────
     remoteVideo.addEventListener('dblclick', (e) => {
         zoomLevel = (zoomLevel + 1) % zoomScales.length;
+        currentScale = zoomScales[zoomLevel];
         if (zoomLevel === 0) {
             translateX = 0; translateY = 0;
             lastTranslateX = 0; lastTranslateY = 0;
@@ -182,7 +197,7 @@
     });
 
     const startDrag = (e) => {
-        if (zoomLevel === 0) return;
+        if (currentScale <= 1.05) return;
         isDragging = true;
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -196,8 +211,8 @@
         e.preventDefault();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const dx = (clientX - startX) / zoomScales[zoomLevel];
-        const dy = (clientY - startY) / zoomScales[zoomLevel];
+        const dx = (clientX - startX) / currentScale;
+        const dy = (clientY - startY) / currentScale;
 
         let adjX = dx, adjY = dy;
         if (rotation === 90) { adjX = dy; adjY = -dx; }
@@ -322,24 +337,19 @@
 
         // If two pointers are down, check for pinch gestures
         if (evCache.length === 2) {
-            // Calculate the distance between the two pointers
             const curDiff = Math.hypot(evCache[0].clientX - evCache[1].clientX, evCache[0].clientY - evCache[1].clientY);
 
             if (prevDiff > 0) {
                 const delta = (curDiff - prevDiff) * 0.01;
-                const newScale = Math.min(Math.max(zoomScales[zoomLevel] + delta, 1), 6);
+                // Accumulate scale smoothly
+                currentScale = Math.min(Math.max(currentScale + delta, 1), 6);
 
-                // Update the current zoom level index if it crosses a threshold
-                // For simplicity, we just update the actual scale inline
-                remoteVideo.style.transform = `rotate(${rotation}deg) scale(${newScale}) translate(${translateX}px, ${translateY}px)`;
+                // Sync zoomLevel for the UI/DblClick logic
+                if (currentScale < 1.2) zoomLevel = 0;
+                else if (currentScale < 3) zoomLevel = 1;
+                else zoomLevel = 2;
 
-                // Keep the "official" current scale level synchronized roughly
-                if (newScale > 1.2) {
-                    videoContainer.classList.add('has-zoom');
-                } else {
-                    videoContainer.classList.remove('has-zoom');
-                    translateX = 0; translateY = 0;
-                }
+                updateTransform();
             }
             prevDiff = curDiff;
         }
@@ -347,11 +357,9 @@
 
     function pointerUpHandler(ev) {
         const index = evCache.findIndex((cachedEv) => cachedEv.pointerId === ev.pointerId);
-        evCache.splice(index, 1);
+        if (index !== -1) evCache.splice(index, 1);
         if (evCache.length < 2) {
             prevDiff = -1;
-            // Snapping to the nearest scale step for consistency
-            // if (zoomLevel > 0) updateTransform();
         }
     }
 
@@ -361,6 +369,45 @@
     remoteVideo.addEventListener('pointercancel', pointerUpHandler);
     remoteVideo.addEventListener('pointerout', pointerUpHandler);
     remoteVideo.addEventListener('pointerleave', pointerUpHandler);
+
+    // ── SDP Munging ─────────────────────────────────
+    function prioritizeH264(sdp) {
+        const lines = sdp.split('\r\n');
+        let mLineIndex = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf('m=video') === 0) {
+                mLineIndex = i;
+                break;
+            }
+        }
+        if (mLineIndex === -1) return sdp;
+
+        const h264Payloads = [];
+        const otherPayloads = [];
+        const rtpMapRegex = /^a=rtpmap:(\d+) H264\/\d+/;
+
+        for (let i = 0; i < lines.length; i++) {
+            const match = lines[i].match(rtpMapRegex);
+            if (match) {
+                h264Payloads.push(match[1]);
+            }
+        }
+
+        if (h264Payloads.length === 0) return sdp;
+
+        const mLineElements = lines[mLineIndex].split(' ');
+        const mLineHeader = mLineElements.slice(0, 3);
+        const existingPayloads = mLineElements.slice(3);
+
+        existingPayloads.forEach(payload => {
+            if (!h264Payloads.includes(payload)) {
+                otherPayloads.push(payload);
+            }
+        });
+
+        lines[mLineIndex] = mLineHeader.concat(h264Payloads, otherPayloads).join(' ');
+        return lines.join('\r\n');
+    }
 
     // Initialize UI
     lucide.createIcons();

@@ -27,6 +27,8 @@
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
     ];
 
     // ── UI Events ────────────────────────────────────
@@ -64,6 +66,8 @@
             }
 
             localVideo.srcObject = localStream;
+            // Safari Fix: Explicitly call play()
+            localVideo.play().catch(console.error);
 
             // Show camera UI
             setupScreen.style.display = 'none';
@@ -234,7 +238,13 @@
         }
 
         // Create and send offer
-        const offer = await pc.createOffer();
+        let offer = await pc.createOffer();
+
+        // Safari/iOS Fix: Prioritize H264 codec
+        if (offer.sdp) {
+            offer.sdp = prioritizeH264(offer.sdp);
+        }
+
         await pc.setLocalDescription(offer);
         socket.emit('offer', { viewerId, sdp: pc.localDescription });
 
@@ -307,6 +317,45 @@
     function setStatus(type, text) {
         statusBadge.className = `status-badge ${type}`;
         statusText.textContent = text;
+    }
+
+    // ── SDP Munging ─────────────────────────────────
+    function prioritizeH264(sdp) {
+        const lines = sdp.split('\r\n');
+        let mLineIndex = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf('m=video') === 0) {
+                mLineIndex = i;
+                break;
+            }
+        }
+        if (mLineIndex === -1) return sdp;
+
+        const h264Payloads = [];
+        const otherPayloads = [];
+        const rtpMapRegex = /^a=rtpmap:(\d+) H264\/\d+/;
+
+        for (let i = 0; i < lines.length; i++) {
+            const match = lines[i].match(rtpMapRegex);
+            if (match) {
+                h264Payloads.push(match[1]);
+            }
+        }
+
+        if (h264Payloads.length === 0) return sdp;
+
+        const mLineElements = lines[mLineIndex].split(' ');
+        const mLineHeader = mLineElements.slice(0, 3);
+        const existingPayloads = mLineElements.slice(3);
+
+        existingPayloads.forEach(payload => {
+            if (!h264Payloads.includes(payload)) {
+                otherPayloads.push(payload);
+            }
+        });
+
+        lines[mLineIndex] = mLineHeader.concat(h264Payloads, otherPayloads).join(' ');
+        return lines.join('\r\n');
     }
 
     // Keep screen awake (Wake Lock API)
