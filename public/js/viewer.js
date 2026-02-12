@@ -153,6 +153,11 @@
         }
     });
 
+    // ── Native Zoom (Double-Click) ──────────────────
+    remoteVideo.addEventListener('dblclick', () => {
+        remoteVideo.classList.toggle('zoomed');
+    });
+
     // ── UI Helpers ───────────────────────────────────
     function showChoice() {
         choiceScreen.classList.remove('hidden');
