@@ -100,44 +100,8 @@ p {
   height: 100vw;
 }
 
-/* ── Night Vision Mode ────────────────────────────── */
-/* Simple but powerful filters to avoid 'muddiness' */
-.night-vision {
-  filter: grayscale(1) brightness(8.0) contrast(2.2) !important;
-}
-
-.night-vision-lift {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.35);
-  /* "Levanta" as sombras drasticamente */
-  pointer-events: none;
-  opacity: 0;
-  z-index: 5;
-  transition: opacity 0.4s ease;
-}
-
-.night-vision-active .night-vision-lift {
-  opacity: 1;
-}
-
-.night-vision-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(0deg, transparent 0, rgba(0, 255, 0, 0.1) 1px, transparent 2px),
-    rgba(0, 100, 0, 0.2);
-  /* Tom verde de alta visibilidade */
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  z-index: 10;
-  mix-blend-mode: screen;
-}
-
-.night-vision-active .night-vision-overlay {
-  opacity: 1;
-}
+/* ── Night Vision Mode (Hardware Binning Only) ────── */
+/* No digital filters, relying on hardware sensitivity (480p mode) */
 
 /* ── UI Bars (Floating Concept) ───────────────────── */
 .top-bar,

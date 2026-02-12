@@ -390,12 +390,6 @@ export default function App() {
                   <Text style={styles.waitingText}>Aguardando sinal da câmera...</Text>
                 </View>
               )}
-              {nightVision && (
-                <>
-                  <View style={styles.nightVisionLift} />
-                  <View style={styles.nightVisionOverlay} />
-                </>
-              )}
             </View>
 
             {/* Bottom Bar (Floating Liquid Glass) */}
