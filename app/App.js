@@ -61,7 +61,7 @@ export default function App() {
   const [status, setStatus] = useState('offline'); // 'offline', 'waiting', 'live'
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Unmuted by default for monitoring
   const [nightVision, setNightVision] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [isBatterySaving, setIsBatterySaving] = useState(false);
@@ -140,6 +140,15 @@ export default function App() {
     return cleanup;
   }, [mode]);
 
+  // Handle Mute/Unmute state on remote tracks
+  useEffect(() => {
+    if (remoteStream && mode === 'viewer') {
+      remoteStream.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+    }
+  }, [isMuted, remoteStream, mode]);
+
   const startCamera = async () => {
     try {
       const devices = await mediaDevices.enumerateDevices();
@@ -189,9 +198,9 @@ export default function App() {
       const currentTrack = localStream.getVideoTracks()[0];
       const settings = currentTrack.getSettings();
 
-      // Request ONLY video for the new track
+      // Request BOTH video and audio for the new track for absolute sync
       const stream = await mediaDevices.getUserMedia({
-        audio: false,
+        audio: true,
         video: {
           deviceId: settings.deviceId ? { exact: settings.deviceId } : undefined,
           width: enabled ? { ideal: 640 } : { ideal: 1920 },
@@ -201,22 +210,20 @@ export default function App() {
       });
 
       const newVideoTrack = stream.getVideoTracks()[0];
+      const newAudioTrack = stream.getAudioTracks()[0];
 
-      // Update local stream state
-      const videoTracks = localStream.getVideoTracks();
-      if (videoTracks.length > 0) {
-        localStream.removeTrack(videoTracks[0]);
-        videoTracks[0].stop(); // Stop ONLY the old video track
-      }
-      localStream.addTrack(newVideoTrack);
-      setLocalStream(localStream); // Trigger re-render
-
+      // Update Peer Connection with BOTH tracks
       if (pcRef.current) {
-        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender) {
-          sender.replaceTrack(newVideoTrack);
-        }
+        const senders = pcRef.current.getSenders();
+        const vSender = senders.find(s => s.track && s.track.kind === 'video');
+        const aSender = senders.find(s => s.track && s.track.kind === 'audio');
+        if (vSender) vSender.replaceTrack(newVideoTrack);
+        if (aSender) aSender.replaceTrack(newAudioTrack);
       }
+
+      // Update local stream state and cleanup old tracks
+      localStream.getTracks().forEach(t => t.stop());
+      setLocalStream(stream);
     } catch (err) {
       console.error('Falha ao ativar modo binning:', err);
     }
@@ -230,29 +237,26 @@ export default function App() {
       setCurrentDeviceIndex(nextIndex);
       const nextDevice = videoDevices[nextIndex];
 
-      // Request ONLY video for the new track
+      // Request BOTH tracks
       const stream = await mediaDevices.getUserMedia({
-        audio: false,
+        audio: true,
         video: { deviceId: nextDevice.deviceId }
       });
       const newVideoTrack = stream.getVideoTracks()[0];
-
-      // Update local stream state
-      const videoTracks = localStream.getVideoTracks();
-      if (videoTracks.length > 0) {
-        localStream.removeTrack(videoTracks[0]);
-        videoTracks[0].stop(); // Stop ONLY the old video track
-      }
-      localStream.addTrack(newVideoTrack);
-      setLocalStream(localStream); // Trigger re-render
+      const newAudioTrack = stream.getAudioTracks()[0];
 
       // Update Peer Connection
       if (pcRef.current) {
-        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender) {
-          sender.replaceTrack(newVideoTrack);
-        }
+        const senders = pcRef.current.getSenders();
+        const vSender = senders.find(s => s.track && s.track.kind === 'video');
+        const aSender = senders.find(s => s.track && s.track.kind === 'audio');
+        if (vSender) vSender.replaceTrack(newVideoTrack);
+        if (aSender) aSender.replaceTrack(newAudioTrack);
       }
+
+      // Cleanup
+      localStream.getTracks().forEach(t => t.stop());
+      setLocalStream(stream);
     } catch (err) {
       console.error('Falha ao trocar câmera:', err);
     }

@@ -192,29 +192,33 @@
                 audio: true
             };
 
-            // Request ONLY video for the new track
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: constraints.video
+            // Request BOTH video and audio for the new track for absolute sync
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: constraints.video,
+                audio: true
             });
-            const newVideoTrack = stream.getVideoTracks()[0];
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            const newAudioTrack = newStream.getAudioTracks()[0];
 
-            // Update WebRTC peers without touching audio
-            const promises = Object.values(peerConnections).map(pc => {
-                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) return sender.replaceTrack(newVideoTrack);
+            // Update WebRTC peers for BOTH tracks
+            const promises = Object.values(peerConnections).flatMap(pc => {
+                const senders = pc.getSenders();
+                const vSender = senders.find(s => s.track && s.track.kind === 'video');
+                const aSender = senders.find(s => s.track && s.track.kind === 'audio');
+
+                const p = [];
+                if (vSender) p.push(vSender.replaceTrack(newVideoTrack));
+                if (aSender) p.push(aSender.replaceTrack(newAudioTrack));
+                return p;
             });
 
             await Promise.all(promises);
 
-            // Update local view (keep audio element intact if possible, or just update track)
-            const videoTracks = localStream.getVideoTracks();
-            if (videoTracks.length > 0) {
-                localStream.removeTrack(videoTracks[0]);
-                videoTracks[0].stop(); // Stop ONLY the old video track
-            }
-            localStream.addTrack(newVideoTrack);
+            // Update local view and stream object
+            localVideo.srcObject = newStream;
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = newStream;
 
-            // Re-trigger play to ensure sync
             localVideo.play().catch(() => { });
 
         } catch (err) {
@@ -251,26 +255,31 @@
                 audio: true
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: constraints.video
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: constraints.video,
+                audio: true
             });
-            const newVideoTrack = stream.getVideoTracks()[0];
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            const newAudioTrack = newStream.getAudioTracks()[0];
 
-            // Update WebRTC peers without touching audio
-            const promises = Object.values(peerConnections).map(pc => {
-                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) return sender.replaceTrack(newVideoTrack);
+            // Update WebRTC peers for BOTH tracks
+            const promises = Object.values(peerConnections).flatMap(pc => {
+                const senders = pc.getSenders();
+                const vSender = senders.find(s => s.track && s.track.kind === 'video');
+                const aSender = senders.find(s => s.track && s.track.kind === 'audio');
+
+                const p = [];
+                if (vSender) p.push(vSender.replaceTrack(newVideoTrack));
+                if (aSender) p.push(aSender.replaceTrack(newAudioTrack));
+                return p;
             });
 
             await Promise.all(promises);
 
             // Update local view
-            const videoTracks = localStream.getVideoTracks();
-            if (videoTracks.length > 0) {
-                localStream.removeTrack(videoTracks[0]);
-                videoTracks[0].stop(); // Stop ONLY the old video track
-            }
-            localStream.addTrack(newVideoTrack);
+            localVideo.srcObject = newStream;
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = newStream;
 
             localVideo.play().catch(() => { });
 

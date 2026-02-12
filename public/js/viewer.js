@@ -21,7 +21,7 @@
     // ── State ────────────────────────────────────────
     let socket = null;
     let pc = null;
-    let isMuted = true;
+    let isMuted = false; // Unmuted by default for monitor usage
     let reconnectTimer = null;
     let nightVisionEnabled = false;
     let rotation = 0; // Start at 0 to avoid initial crop
@@ -99,6 +99,13 @@
             pc.oniceconnectionstatechange = () => {
                 switch (pc.iceConnectionState) {
                     case 'connected':
+                        remoteVideo.muted = isMuted;
+                        remoteVideo.play();
+                        showLive();
+
+                        // Sync UI button
+                        btnMute.classList.toggle('active', !isMuted);
+                        break;
                     case 'completed':
                         showLive();
                         break;
