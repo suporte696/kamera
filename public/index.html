@@ -86,27 +86,9 @@
     </button>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/viewer.js"></script>
 
-  <!-- SVG Filters for Advanced Night Vision -->
-  <svg style="display: none;">
-    <filter id="nightVisionFilter">
-      <!-- 1. Ultra Gamma & Exposure: "Lift" midtones (gamma = 0.35, amp = 1.2) -->
-      <feComponentTransfer>
-        <feFuncR type="gamma" amplitude="1.2" exponent="0.35" />
-        <feFuncG type="gamma" amplitude="1.2" exponent="0.35" />
-        <feFuncB type="gamma" amplitude="1.2" exponent="0.35" />
-      </feComponentTransfer>
-
-      <!-- 2. Grayscale + Green Tint + High Contrast -->
-      <feColorMatrix type="matrix" values="
-        0.33 0.33 0.33 0 0
-        0    1    0    0 0
-        0    0    0    0 0
-        0    0    0    1 0" />
-    </filter>
-  </svg>
+  <div id="nightVisionLift" class="night-vision-lift"></div>
 </body>
 
 </html>

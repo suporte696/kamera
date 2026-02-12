@@ -659,13 +659,13 @@ const styles = StyleSheet.create({
   },
   nightVisionLift: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)', // "Levanta" os pretos para cinza nítido
+    backgroundColor: 'rgba(255, 255, 255, 0.45)', // Máximo levantamento de pretos
     pointerEvents: 'none',
     zIndex: 5,
   },
   nightVisionOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 255, 0, 0.2)', // Tom verde de alta visibilidade
+    backgroundColor: 'rgba(0, 255, 0, 0.25)', // Verde intenso para contraste
     borderWidth: 0,
     pointerEvents: 'none',
     zIndex: 6,

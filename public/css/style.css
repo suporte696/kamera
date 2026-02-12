@@ -102,15 +102,29 @@ p {
 
 /* ── Night Vision Mode ────────────────────────────── */
 .night-vision {
-  filter: url(#nightVisionFilter) contrast(1.4) brightness(1.5);
+  filter: grayscale(1) brightness(3.5) contrast(1.6) sepia(1) hue-rotate(80deg) saturate(3);
+}
+
+.night-vision-lift {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+  transition: opacity 0.4s ease;
+}
+
+.night-vision-active .night-vision-lift {
+  opacity: 1;
 }
 
 .night-vision-overlay {
   position: absolute;
   inset: 0;
   background:
-    repeating-linear-gradient(0deg, transparent 0, rgba(0, 255, 0, 0.05) 1px, transparent 2px),
-    rgba(0, 20, 0, 0.1);
+    repeating-linear-gradient(0deg, transparent 0, rgba(0, 255, 0, 0.08) 1px, transparent 2px),
+    rgba(0, 50, 0, 0.15);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
