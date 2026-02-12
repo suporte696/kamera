@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Kamera — Viewer</title>
+  <meta name="description" content="Babá eletrônica P2P em tempo real">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+</head>
+
+<body>
+
+  <!-- Waiting State -->
+  <div class="center-message" id="waitingScreen">
+    <div class="center-icon">👶</div>
+    <h2>Kamera</h2>
+    <p>Aguardando a câmera ser conectada…</p>
+    <div class="spinner"></div>
+    <button class="btn btn-primary" onclick="location.href='/camera.html'" style="margin-top: 20px;">
+      Ser Câmera 🎥
+    </button>
+  </div>
+
+  <!-- Video Stream -->
+  <div class="video-container" id="videoContainer" style="display:none;">
+    <video id="remoteVideo" autoplay playsinline muted></video>
+    <div class="night-vision-overlay" id="nightVisionOverlay"></div>
+  </div>
+
+  <!-- Top Bar -->
+  <div class="top-bar" id="topBar" style="display:none;">
+    <div class="logo">
+      <div class="logo-icon">👶</div>
+      <span>Kamera</span>
+    </div>
+    <div class="status-badge connecting" id="statusBadge">
+      <span class="status-dot"></span>
+      <span id="statusText">Conectando…</span>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottom-bar" id="bottomBar" style="display:none;">
+    <button class="btn btn-circle" id="btnGoToCamera" title="Mudar para Câmera">
+      🎥
+    </button>
+    <button class="btn btn-circle" id="btnNightVision" title="Visão noturna">
+      🌙
+    </button>
+    <button class="btn btn-circle" id="btnMute" title="Mute / Unmute">
+      🔊
+    </button>
+    <button class="btn btn-circle" id="btnFullscreen" title="Tela cheia">
+      ⛶
+    </button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/viewer.js"></script>
+</body>
+
+</html>

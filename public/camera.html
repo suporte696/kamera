@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kamera — Câmera</title>
+    <meta name="description" content="Transmitir câmera como babá eletrônica">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎥</text></svg>">
+</head>
+
+<body>
+
+    <!-- Setup Screen -->
+    <div class="center-message" id="setupScreen">
+        <div class="center-icon">🎥</div>
+        <h2>Câmera</h2>
+        <p>Inicie a transmissão para que o viewer possa assistir em tempo real.</p>
+        <button class="btn btn-primary" id="btnStart">Iniciar Câmera</button>
+        <button class="btn btn-primary" onclick="location.href='/'"
+            style="margin-top: 10px; background: var(--bg-card); color: var(--text-secondary); box-shadow: none;">
+            Ver Câmera 👶
+        </button>
+    </div>
+
+    <!-- Camera Preview -->
+    <div class="camera-preview" id="cameraPreview" style="display:none;">
+        <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar" id="topBar" style="display:none;">
+        <div class="logo">
+            <div class="logo-icon">🎥</div>
+            <span>Câmera</span>
+        </div>
+        <div class="status-badge connecting" id="statusBadge">
+            <span class="status-dot"></span>
+            <span id="statusText">Aguardando viewer…</span>
+        </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar" id="bottomBar" style="display:none;">
+        <button class="btn btn-circle" id="btnGoToViewer" title="Mudar para Viewer">
+            👶
+        </button>
+        <div class="viewer-count" id="viewerCount">
+            👁 <span id="viewerNum">0</span> viewer(s)
+        </div>
+        <button class="btn btn-circle danger" id="btnStop" title="Parar transmissão">
+            ⏹
+        </button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/camera.js"></script>
+</body>
+
+</html>
