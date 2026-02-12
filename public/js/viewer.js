@@ -14,6 +14,7 @@
     const btnNightVision = document.getElementById('btnNightVision');
     const btnGoToCamera = document.getElementById('btnGoToCamera');
     const btnRotate = document.getElementById('btnRotate');
+    const btnFlipRemote = document.getElementById('btnFlipRemote');
 
     // ── State ────────────────────────────────────────
     const socket = io();
@@ -148,6 +149,11 @@
 
     // Initialize rotation
     updateRotation();
+
+    // Flip Remote Camera
+    btnFlipRemote.addEventListener('click', () => {
+        socket.emit('camera-flip');
+    });
 
     // ── Night Vision ─────────────────────────────────
     btnNightVision.addEventListener('click', () => {

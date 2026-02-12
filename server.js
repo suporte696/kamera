@@ -69,6 +69,12 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('camera-flip', () => {
+        if (broadcaster) {
+            io.to(broadcaster).emit('camera-flip');
+        }
+    });
+
     // Disconnect handling
     socket.on('disconnect', () => {
         console.log(`[disconnect] ${socket.id}`);

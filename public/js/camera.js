@@ -99,7 +99,7 @@
     });
 
     // ── Flip Camera ──────────────────────────────────
-    btnFlip.addEventListener('click', async () => {
+    async function toggleCamera() {
         if (!localStream) return;
 
         try {
@@ -117,7 +117,6 @@
             });
 
             const newVideoTrack = newStream.getVideoTracks()[0];
-            const oldVideoTrack = localStream.getVideoTracks()[0];
 
             // Replace track in all peer connections
             const promises = Object.values(peerConnections).map(pc => {
@@ -142,9 +141,14 @@
             console.error('Failed to flip camera:', err);
             alert('Erro ao trocar de câmera.');
         }
-    });
+    }
+
+    btnFlip.addEventListener('click', toggleCamera);
 
     // ── Signaling Events ─────────────────────────────
+
+    // Remote flip request from viewer
+    socket.on('camera-flip', toggleCamera);
 
     // A viewer joined — create offer for them
     socket.on('viewer-joined', async ({ viewerId }) => {
