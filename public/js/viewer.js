@@ -25,7 +25,7 @@
     let pc = null;
     let isMuted = false;
     let reconnectTimer = null;
-    let nightVisionEnabled = false;
+    let nightLevel = 0; // 0 = off, 1 = night vision, 2 = night vision + brightness boost
     let audioCtx = null;
     let gainNode = null;
     let sourceNode = null;
@@ -50,18 +50,34 @@
         videoContainer.classList.toggle('is-dragging', isDragging);
     }
 
-    const ICE_SERVERS = [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-    ];
+    // ICE servers come from the server (access mode: local = none, remote = STUN/TURN)
+    let iceServers = [];
+    let accessMode = null;
 
     // ── Socket Management ────────────────────────────
     function initSocket() {
         if (socket) return;
         socket = io();
+
+        socket.on('config', (config) => {
+            const changed = accessMode !== null && accessMode !== config.mode;
+            accessMode = config.mode;
+            iceServers = config.iceServers || [];
+            console.log(`Access mode: ${accessMode}`);
+            if (changed) {
+                cleanupPC();
+                showWaiting();
+                scheduleReconnect();
+            }
+        });
+
+        socket.on('access-denied', () => {
+            cleanupPC();
+            showWaiting(
+                'Acesso apenas na rede local',
+                'A câmera só pode ser vista por dispositivos conectados ao mesmo Wi-Fi.'
+            );
+        });
 
         socket.on('connect', () => {
             console.log('Connected to signaling server');
@@ -80,7 +96,7 @@
         socket.on('offer', async ({ sdp }) => {
             showConnecting();
             cleanupPC();
-            pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            pc = new RTCPeerConnection({ iceServers });
 
             pc.onicecandidate = (e) => {
                 if (e.candidate) {
@@ -227,15 +243,25 @@
         }
     }
 
-    btnNightVision.addEventListener('click', () => {
-        nightVisionEnabled = !nightVisionEnabled;
-        remoteVideo.classList.toggle('night-vision', nightVisionEnabled);
-        videoContainer.classList.toggle('night-vision-active', nightVisionEnabled);
-        btnNightVision.classList.toggle('active', nightVisionEnabled);
+    // Cycle: off → night vision → night vision + brightness boost → off
+    const NIGHT_TITLES = ['Visão Noturna', 'Visão Noturna: ligada (toque para + brilho)', 'Visão Noturna + Brilho (toque para desligar)'];
 
-        // Signal camera to toggle high-sensitivity (binning) mode
-        if (socket) {
-            socket.emit('night-mode', { enabled: nightVisionEnabled });
+    btnNightVision.addEventListener('click', () => {
+        const wasEnabled = nightLevel > 0;
+        nightLevel = (nightLevel + 1) % 3;
+        const enabled = nightLevel > 0;
+
+        remoteVideo.classList.toggle('night-vision', enabled);
+        remoteVideo.classList.toggle('night-boost', nightLevel === 2);
+        videoContainer.classList.toggle('night-vision-active', enabled);
+        btnNightVision.classList.toggle('active', enabled);
+        btnNightVision.classList.toggle('boost', nightLevel === 2);
+        btnNightVision.title = NIGHT_TITLES[nightLevel];
+
+        // Signal camera to toggle high-sensitivity (binning) mode.
+        // The brightness boost is viewer-only, so only signal on off ↔ on.
+        if (socket && wasEnabled !== enabled) {
+            socket.emit('night-mode', { enabled });
         }
     });
 
@@ -346,7 +372,13 @@
         bottomBar.style.display = 'none';
     }
 
-    function showWaiting() {
+    const waitingTitle = waitingScreen.querySelector('h2');
+    const waitingDesc = waitingScreen.querySelector('p');
+    const defaultWaiting = [waitingTitle.textContent, waitingDesc.textContent];
+
+    function showWaiting(title = defaultWaiting[0], desc = defaultWaiting[1]) {
+        waitingTitle.textContent = title;
+        waitingDesc.textContent = desc;
         choiceScreen.classList.add('hidden');
         choiceScreen.style.display = 'none';
         waitingScreen.classList.remove('hidden');

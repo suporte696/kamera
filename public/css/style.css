@@ -103,6 +103,11 @@ p {
 /* ── Night Vision Mode (Hardware Binning Only) ────── */
 /* No digital filters, relying on hardware sensitivity (480p mode) */
 
+/* Level 2: extra brightness on top of night vision (viewer-only) */
+#remoteVideo.night-boost {
+  filter: brightness(4);
+}
+
 /* ── UI Bars (Floating Concept) ───────────────────── */
 .top-bar,
 .bottom-bar {
@@ -244,6 +249,13 @@ p {
   color: #fff;
   border-color: var(--accent);
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+}
+
+/* Night vision level 2 (brightness boost) */
+.btn-circle.active.boost {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
 }
 
 .btn-circle.danger:hover {

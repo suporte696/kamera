@@ -23,13 +23,27 @@
     let videoDevices = [];
     let currentDeviceIndex = 0;
 
-    const ICE_SERVERS = [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-    ];
+    // ICE servers come from the server (access mode: local = none, remote = STUN/TURN)
+    let iceServers = [];
+    let accessMode = null;
+
+    socket.on('config', (config) => {
+        const changed = accessMode !== null && accessMode !== config.mode;
+        accessMode = config.mode;
+        iceServers = config.iceServers || [];
+        console.log(`Access mode: ${accessMode}`);
+        if (changed) closeAllPeers();
+    });
+
+    function closeAllPeers() {
+        Object.keys(peerConnections).forEach(id => {
+            peerConnections[id].close();
+            delete peerConnections[id];
+        });
+        viewerCount = 0;
+        viewerNum.textContent = '0';
+        if (localStream) setStatus('connecting', 'Aguardando viewer…');
+    }
 
     // ── UI Events ────────────────────────────────────
 
@@ -95,14 +109,7 @@
             localStream = null;
         }
 
-        // Close all peer connections
-        Object.keys(peerConnections).forEach(id => {
-            peerConnections[id].close();
-            delete peerConnections[id];
-        });
-
-        viewerCount = 0;
-        viewerNum.textContent = '0';
+        closeAllPeers();
 
         // Reset UI
         cameraPreview.style.display = 'none';
@@ -353,7 +360,7 @@
 
     // ── RTCPeerConnection Factory ────────────────────
     function createPeerConnection(viewerId) {
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const pc = new RTCPeerConnection({ iceServers });
 
         pc.onicecandidate = (e) => {
             if (e.candidate) {
