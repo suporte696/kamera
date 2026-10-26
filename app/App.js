@@ -76,6 +76,8 @@ export default function App() {
 
   const socketRef = useRef(null);
   const pcRef = useRef(null);
+  // ICE servers come from the server (access mode: local = none, remote = STUN/TURN)
+  const iceConfigRef = useRef({ mode: null, iceServers: [] });
 
   // ── Battery Saving Logic ──────────────────────
   const resetInactivityTimer = () => {
@@ -112,6 +114,26 @@ export default function App() {
         socketRef.current.emit('request-offer');
       } else if (mode === 'camera') {
         startCamera();
+      }
+    });
+
+    socketRef.current.on('config', (config) => {
+      const changed = iceConfigRef.current.mode !== null && iceConfigRef.current.mode !== config.mode;
+      iceConfigRef.current = { mode: config.mode, iceServers: config.iceServers || [] };
+      console.log('[Access] Modo:', config.mode);
+      if (changed && pcRef.current) {
+        // Drop the stream negotiated under the old mode
+        pcRef.current.close();
+        pcRef.current = null;
+        setRemoteStream(null);
+        setStatus('waiting');
+      }
+    });
+
+    socketRef.current.on('access-denied', () => {
+      if (mode === 'viewer') {
+        console.warn('[Access] Câmera disponível apenas na rede local');
+        setStatus('waiting');
       }
     });
 
@@ -343,7 +365,7 @@ export default function App() {
   };
 
   const createOffer = async (stream, viewerId) => {
-    pcRef.current = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    pcRef.current = new RTCPeerConnection({ iceServers: iceConfigRef.current.iceServers });
     stream.getTracks().forEach(track => pcRef.current.addTrack(track, stream));
 
     pcRef.current.onicecandidate = (e) => {
@@ -365,7 +387,7 @@ export default function App() {
   };
 
   const handleOffer = async (sdp) => {
-    pcRef.current = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    pcRef.current = new RTCPeerConnection({ iceServers: iceConfigRef.current.iceServers });
 
     pcRef.current.onicecandidate = (e) => {
       if (e.candidate) {
